@@ -226,7 +226,7 @@ class GameWindow(arcade.Window):
         self.up_pressed: bool = False
         self.down_pressed: bool = False
 
-        self.main_gravity = np.array([0, -GRAVITY], dtype='float')
+        self.main_gravity = np.array([0, GRAVITY], dtype='float')
         # self.main_gravity = np.array([-GRAVITY, -GRAVITY], dtype='float')
 
 
@@ -261,7 +261,7 @@ class GameWindow(arcade.Window):
 
         # Map name
         # map_name = ":resources:/tiled_maps/pymunk_test_map.json"
-        map_name = "resources/tiled_maps/test_map_1.json"
+        map_name = "resources/tiled_maps/gravity_test.json"
 
         # Load in TileMap
         tile_map = arcade.load_tilemap(map_name, SPRITE_SCALING_TILES)
