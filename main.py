@@ -4,6 +4,8 @@ Example of Pymunk Physics Engine Platformer
 import math
 from typing import Optional
 import arcade
+import numpy as np
+
 
 SCREEN_TITLE = "PyMunk Platformer"
 
@@ -28,7 +30,7 @@ SCREEN_HEIGHT = SPRITE_SIZE * SCREEN_GRID_HEIGHT
 # --- Physics forces. Higher number, faster accelerating.
 
 # Gravity
-GRAVITY = 1500
+GRAVITY = -2000
 
 # Damping - Amount of speed lost per second
 DEFAULT_DAMPING = 1.0
@@ -43,14 +45,13 @@ DYNAMIC_ITEM_FRICTION = 0.6
 PLAYER_MASS = 2.0
 
 # Keep player from going too fast
-PLAYER_MAX_HORIZONTAL_SPEED = 450
-PLAYER_MAX_VERTICAL_SPEED = 1600
+PLAYER_MAX_HORIZONTAL_SPEED = 1000
+PLAYER_MAX_VERTICAL_SPEED = 1000
 
 # Force applied while on the ground
 PLAYER_MOVE_FORCE_ON_GROUND = 8000
-
 # Force applied when moving left/right in the air
-PLAYER_MOVE_FORCE_IN_AIR = 900
+PLAYER_MOVE_FORCE_IN_AIR = 5000
 
 # Strength of a jump
 PLAYER_JUMP_IMPULSE = 1800
@@ -65,20 +66,44 @@ LEFT_FACING = 1
 # How many pixels to move before we change the texture in the walking animation
 DISTANCE_TO_CHANGE_TEXTURE = 20
 
-# How much force to put on the bullet
-BULLET_MOVE_FORCE = 4500
 
-# Mass of the bullet
-BULLET_MASS = 0.1
 
-# Make bullet less affected by gravity
-BULLET_GRAVITY = 300
+def normalize_vector(vec: np.ndarray, inplace=False) -> np.ndarray:
+    if inplace:
+        vec /= np.linalg.norm(vec)
+        return vec
+    else:
+        return vec / np.linalg.norm(vec)
+
+def rotate90_cw(vec: np.ndarray, inplace=False) -> np.ndarray:
+    if inplace:
+        x = vec[0]
+        vec[0] = vec[1]
+        vec[1] = -x
+        return vec
+    else:
+        return np.array([
+            vec[1],
+            -vec[0]
+        ])
+    
+def rotate90_ccw(vec: np.ndarray, inplace=False) -> np.ndarray:
+    if inplace:
+        x = vec[0]
+        vec[0] = -vec[1]
+        vec[1] = x
+        return vec
+    else:
+        return np.array([
+            -vec[1],
+            vec[0]
+        ])
 
 
 class PlayerSprite(arcade.Sprite):
     """ Player Sprite """
     def __init__(self,
-                 ladder_list: arcade.SpriteList,
+                #  ladder_list: arcade.SpriteList,
                  hit_box_algorithm):
         """ Init """
         # Let parent initialize
@@ -107,13 +132,6 @@ class PlayerSprite(arcade.Sprite):
             texture = arcade.load_texture_pair(f"{main_path}_walk{i}.png")
             self.walk_textures.append(texture)
 
-        # Load textures for climbing
-        self.climbing_textures = []
-        texture = arcade.load_texture(f"{main_path}_climb0.png")
-        self.climbing_textures.append(texture)
-        texture = arcade.load_texture(f"{main_path}_climb1.png")
-        self.climbing_textures.append(texture)
-
         # Set the initial texture
         self.texture = self.idle_texture_pair[0]
 
@@ -130,8 +148,6 @@ class PlayerSprite(arcade.Sprite):
         self.x_odometer = 0
         self.y_odometer = 0
 
-        self.ladder_list = ladder_list
-        self.is_on_ladder = False
 
     def pymunk_moved(self, physics_engine, dx, dy, d_angle):
         """ Handle being moved by the pymunk engine """
@@ -144,38 +160,9 @@ class PlayerSprite(arcade.Sprite):
         # Are we on the ground?
         is_on_ground = physics_engine.is_on_ground(self)
 
-        # Are we on a ladder?
-        if len(arcade.check_for_collision_with_list(self, self.ladder_list)) > 0:
-            if not self.is_on_ladder:
-                self.is_on_ladder = True
-                self.pymunk.gravity = (0, 0)
-                self.pymunk.damping = 0.0001
-                self.pymunk.max_vertical_velocity = PLAYER_MAX_HORIZONTAL_SPEED
-        else:
-            if self.is_on_ladder:
-                self.pymunk.damping = 1.0
-                self.pymunk.max_vertical_velocity = PLAYER_MAX_VERTICAL_SPEED
-                self.is_on_ladder = False
-                self.pymunk.gravity = None
-
         # Add to the odometer how far we've moved
         self.x_odometer += dx
         self.y_odometer += dy
-
-        if self.is_on_ladder and not is_on_ground:
-            # Have we moved far enough to change the texture?
-            if abs(self.y_odometer) > DISTANCE_TO_CHANGE_TEXTURE:
-
-                # Reset the odometer
-                self.y_odometer = 0
-
-                # Advance the walking animation
-                self.cur_texture += 1
-
-            if self.cur_texture > 1:
-                self.cur_texture = 0
-            self.texture = self.climbing_textures[self.cur_texture]
-            return
 
         # Jumping animation
         if not is_on_ground:
@@ -203,13 +190,6 @@ class PlayerSprite(arcade.Sprite):
                 self.cur_texture = 0
             self.texture = self.walk_textures[self.cur_texture][self.character_face_direction]
 
-class BulletSprite(arcade.SpriteSolidColor):
-    """ Bullet Sprite """
-    def pymunk_moved(self, physics_engine, dx, dy, d_angle):
-        """ Handle when the sprite is moved by the physics engine. """
-        # If the bullet falls below the screen, remove it
-        if self.center_y < -100:
-            self.remove_from_sprite_lists()
 
 class GameWindow(arcade.Window):
     """ Main Window """
@@ -220,56 +200,89 @@ class GameWindow(arcade.Window):
         # Init the parent class
         super().__init__(width, height, title)
 
+        # Physics engine
+        self.physics_engine: Optional[arcade.PymunkPhysicsEngine] = None
+
         # Player sprite
         self.player_sprite: Optional[PlayerSprite] = None
 
         # Sprite lists we need
         self.player_list: Optional[arcade.SpriteList] = None
         self.wall_list: Optional[arcade.SpriteList] = None
-        self.bullet_list: Optional[arcade.SpriteList] = None
         self.item_list: Optional[arcade.SpriteList] = None
         self.moving_sprites_list: Optional[arcade.SpriteList] = None
-        self.ladder_list: Optional[arcade.SpriteList] = None
 
         # Track the current state of what key is pressed
+        self.a_pressed: bool = False
+        self.d_pressed: bool = False
+        self.w_pressed: bool = False
+        self.s_pressed: bool = False
+
+        self.space_pressed: bool = False
+        self.enter_pressed: bool = False
+
         self.left_pressed: bool = False
         self.right_pressed: bool = False
         self.up_pressed: bool = False
         self.down_pressed: bool = False
 
-        # Physics engine
-        self.physics_engine: Optional[arcade.PymunkPhysicsEngine] = None
+        self.main_gravity = np.array([0, -GRAVITY], dtype='float')
+        # self.main_gravity = np.array([-GRAVITY, -GRAVITY], dtype='float')
+
 
         # Set background color
         arcade.set_background_color(arcade.color.AMAZON)
+    
 
+    @property
+    def main_gravity(self):
+        return self._main_gravity
+    
+    @main_gravity.setter
+    def main_gravity(self, grav):
+        if isinstance(grav, np.ndarray):
+            self._main_gravity = grav
+        else:
+            self._main_gravity = np.array(grav, dtype='float')
+        self._main_gravity_direction = normalize_vector(self._main_gravity)
+        if self.physics_engine:
+            self.physics_engine.space.gravity = tuple(self._main_gravity)
+
+    @property
+    def main_gravity_dir(self):
+        """The direction (= normalized vector) of the main gravity"""
+        return self._main_gravity_direction
+    
     def setup(self):
         """ Set up everything with the game """
 
         # Create the sprite lists
         self.player_list = arcade.SpriteList()
-        self.bullet_list = arcade.SpriteList()
 
         # Map name
-        map_name = ":resources:/tiled_maps/pymunk_test_map.json"
+        # map_name = ":resources:/tiled_maps/pymunk_test_map.json"
+        map_name = "resources/tiled_maps/test_map_1.json"
 
         # Load in TileMap
         tile_map = arcade.load_tilemap(map_name, SPRITE_SCALING_TILES)
 
         # Pull the sprite layers out of the tile map
         self.wall_list = tile_map.sprite_lists["Platforms"]
-        self.item_list = tile_map.sprite_lists["Dynamic Items"]
-        self.ladder_list = tile_map.sprite_lists["Ladders"]
-        self.moving_sprites_list = tile_map.sprite_lists['Moving Platforms']
+        self.item_list = tile_map.sprite_lists.get("Dynamic Items") or arcade.SpriteList()
+        self.moving_sprites_list = tile_map.sprite_lists.get('Moving Platforms') or arcade.SpriteList()
 
         # Create player sprite
-        self.player_sprite = PlayerSprite(self.ladder_list, hit_box_algorithm="Detailed")
+        self.player_sprite = PlayerSprite(hit_box_algorithm="Detailed")
 
         # Set player location
+        
         grid_x = 1
         grid_y = 1
-        self.player_sprite.center_x = SPRITE_SIZE * grid_x + SPRITE_SIZE / 2
-        self.player_sprite.center_y = SPRITE_SIZE * grid_y + SPRITE_SIZE / 2
+        # self.player_sprite.center_x = SPRITE_SIZE * grid_x + SPRITE_SIZE / 2
+        # self.player_sprite.center_y = SPRITE_SIZE * grid_y + SPRITE_SIZE / 2
+        # Start at center of map
+        self.player_sprite.center_x = (tile_map.width * SPRITE_SIZE) / 2
+        self.player_sprite.center_y = (tile_map.height * SPRITE_SIZE) / 2
         # Add to player sprite list
         self.player_list.append(self.player_sprite)
 
@@ -284,24 +297,11 @@ class GameWindow(arcade.Window):
         damping = DEFAULT_DAMPING
 
         # Set the gravity. (0, 0) is good for outer space and top-down.
-        gravity = (0, -GRAVITY)
+        # gravity = (0, -GRAVITY)
 
         # Create the physics engine
         self.physics_engine = arcade.PymunkPhysicsEngine(damping=damping,
-                                                         gravity=gravity)
-
-        def wall_hit_handler(bullet_sprite, _wall_sprite, _arbiter, _space, _data):
-            """ Called for bullet/wall collision """
-            bullet_sprite.remove_from_sprite_lists()
-
-        self.physics_engine.add_collision_handler("bullet", "wall", post_handler=wall_hit_handler)
-
-        def item_hit_handler(bullet_sprite, item_sprite, _arbiter, _space, _data):
-            """ Called for bullet/wall collision """
-            bullet_sprite.remove_from_sprite_lists()
-            item_sprite.remove_from_sprite_lists()
-
-        self.physics_engine.add_collision_handler("bullet", "item", post_handler=item_hit_handler)
+                                                         gravity=tuple(self.main_gravity))
 
         # Add the player.
         # For the player, we set the damping to a lower value, which increases
@@ -345,25 +345,77 @@ class GameWindow(arcade.Window):
     def on_key_press(self, key, modifiers):
         """Called whenever a key is pressed. """
 
+        # Walking directions
+        if key == arcade.key.A:
+            self.a_pressed = True
+        elif key == arcade.key.D:
+            self.d_pressed = True
+        elif key == arcade.key.W:
+            self.w_pressed = True
+        elif key == arcade.key.S:
+            self.s_pressed = True
+
+        # Jump
+        elif key == arcade.key.SPACE:
+            self.space_pressed = True
+            # find out if player is standing on ground
+            if self.physics_engine.is_on_ground(self.player_sprite):
+                impulse = -self.main_gravity / np.linalg.norm(self.main_gravity)  * PLAYER_JUMP_IMPULSE
+                impulse = tuple(impulse)
+                self.physics_engine.apply_impulse(self.player_sprite, impulse)
+        
+        # Gravity modifier
+        elif key == arcade.key.ENTER:
+            self.enter_pressed = True
+            self.main_gravity = -self.main_gravity
+        
+        # TODO: combinations of direction buttons could be done better, this is just for testing
+        def update_gravity():
+            # This one will set gravity to 0 if two opposite keys are pressed, is this good...?
+            new_grav = np.array([0, 0], dtype='float')
+            if self.left_pressed and not self.right_pressed:
+                new_grav[0] = GRAVITY
+            elif self.right_pressed and not self.left_pressed:
+                new_grav[0] = -GRAVITY
+            if self.up_pressed and not self.down_pressed:
+                new_grav[1] = -GRAVITY
+            elif self.down_pressed and not self.up_pressed:
+                new_grav[1] = GRAVITY
+            self.main_gravity = new_grav
+            
         if key == arcade.key.LEFT:
             self.left_pressed = True
+            update_gravity()
+            # self.main_gravity = np.array([GRAVITY, 0], dtype='float')
         elif key == arcade.key.RIGHT:
             self.right_pressed = True
+            update_gravity()
+            # self.main_gravity = np.array([-GRAVITY, 0], dtype='float')
         elif key == arcade.key.UP:
             self.up_pressed = True
-            # find out if player is standing on ground, and not on a ladder
-            if self.physics_engine.is_on_ground(self.player_sprite) \
-                    and not self.player_sprite.is_on_ladder:
-                # She is! Go ahead and jump
-                impulse = (0, PLAYER_JUMP_IMPULSE)
-                self.physics_engine.apply_impulse(self.player_sprite, impulse)
+            update_gravity()
+            # self.main_gravity = np.array([0, -GRAVITY], dtype='float')
         elif key == arcade.key.DOWN:
             self.down_pressed = True
+            update_gravity()
+            # self.main_gravity = np.array([0, GRAVITY], dtype='float')
 
     def on_key_release(self, key, modifiers):
         """Called when the user releases a key. """
 
-        if key == arcade.key.LEFT:
+        if key == arcade.key.A:
+            self.a_pressed = False
+        elif key == arcade.key.D:
+            self.d_pressed = False
+        elif key == arcade.key.W:
+            self.w_pressed = False
+        elif key == arcade.key.S:
+            self.s_pressed = False
+        elif key == arcade.key.SPACE:
+            self.space_pressed = False
+        elif key == arcade.key.ENTER:
+            self.enter_pressed = False
+        elif key == arcade.key.LEFT:
             self.left_pressed = False
         elif key == arcade.key.RIGHT:
             self.right_pressed = False
@@ -374,95 +426,38 @@ class GameWindow(arcade.Window):
 
     def on_mouse_press(self, x, y, button, modifiers):
         """ Called whenever the mouse button is clicked. """
+        pass
 
-        bullet = BulletSprite(20, 5, arcade.color.DARK_YELLOW)
-        self.bullet_list.append(bullet)
-
-        # Position the bullet at the player's current location
-        start_x = self.player_sprite.center_x
-        start_y = self.player_sprite.center_y
-        bullet.position = self.player_sprite.position
-
-        # Get from the mouse the destination location for the bullet
-        # IMPORTANT! If you have a scrolling screen, you will also need
-        # to add in self.view_bottom and self.view_left.
-        dest_x = x
-        dest_y = y
-
-        # Do math to calculate how to get the bullet to the destination.
-        # Calculation the angle in radians between the start points
-        # and end points. This is the angle the bullet will travel.
-        x_diff = dest_x - start_x
-        y_diff = dest_y - start_y
-        angle = math.atan2(y_diff, x_diff)
-
-        # What is the 1/2 size of this sprite, so we can figure out how far
-        # away to spawn the bullet
-        size = max(self.player_sprite.width, self.player_sprite.height) / 2
-
-        # Use angle to to spawn bullet away from player in proper direction
-        bullet.center_x += size * math.cos(angle)
-        bullet.center_y += size * math.sin(angle)
-
-        # Set angle of bullet
-        bullet.angle = math.degrees(angle)
-
-        # Gravity to use for the bullet
-        # If we don't use custom gravity, bullet drops too fast, or we have
-        # to make it go too fast.
-        # Force is in relation to bullet's angle.
-        bullet_gravity = (0, -BULLET_GRAVITY)
-
-        # Add the sprite. This needs to be done AFTER setting the fields above.
-        self.physics_engine.add_sprite(bullet,
-                                       mass=BULLET_MASS,
-                                       damping=1.0,
-                                       friction=0.6,
-                                       collision_type="bullet",
-                                       gravity=bullet_gravity,
-                                       elasticity=0.9)
-
-        # Add force to bullet
-        force = (BULLET_MOVE_FORCE, 0)
-        self.physics_engine.apply_force(bullet, force)
+    def apply_force_to_player(self, direction: np.ndarray, force: float):
+        self.physics_engine.apply_force(self.player_sprite, tuple(direction * force))
 
     def on_update(self, delta_time):
         """ Movement and game logic """
 
         is_on_ground = self.physics_engine.is_on_ground(self.player_sprite)
         # Update player forces based on keys pressed
-        if self.left_pressed and not self.right_pressed:
-            # Create a force to the left. Apply it.
-            if is_on_ground or self.player_sprite.is_on_ladder:
-                force = (-PLAYER_MOVE_FORCE_ON_GROUND, 0)
-            else:
-                force = (-PLAYER_MOVE_FORCE_IN_AIR, 0)
-            self.physics_engine.apply_force(self.player_sprite, force)
+        if self.a_pressed and not self.d_pressed:
+            # Create a force to the left, perpendicular to the gravity. 
+            # Gravity pulls down so this actually needs to be the gravity rotated *clockwise*
+            force_dir = rotate90_cw(self.main_gravity_dir)
+            self.apply_force_to_player(force_dir, PLAYER_MOVE_FORCE_ON_GROUND if is_on_ground else PLAYER_MOVE_FORCE_IN_AIR)
             # Set friction to zero for the player while moving
+            # TODO: is this really a good idea?
             self.physics_engine.set_friction(self.player_sprite, 0)
-        elif self.right_pressed and not self.left_pressed:
-            # Create a force to the right. Apply it.
-            if is_on_ground or self.player_sprite.is_on_ladder:
-                force = (PLAYER_MOVE_FORCE_ON_GROUND, 0)
-            else:
-                force = (PLAYER_MOVE_FORCE_IN_AIR, 0)
-            self.physics_engine.apply_force(self.player_sprite, force)
+        elif self.d_pressed and not self.a_pressed:
+            # Create a force to the right, perpendicular to the gravity. 
+            # Gravity pulls down so this actually needs to be the gravity rotated *counterclockwise*
+            force_dir = rotate90_ccw(self.main_gravity_dir)
+            self.apply_force_to_player(force_dir, PLAYER_MOVE_FORCE_ON_GROUND if is_on_ground else PLAYER_MOVE_FORCE_IN_AIR)
             # Set friction to zero for the player while moving
+            # TODO: is this really a good idea?
             self.physics_engine.set_friction(self.player_sprite, 0)
-        elif self.up_pressed and not self.down_pressed:
-            # Create a force to the right. Apply it.
-            if self.player_sprite.is_on_ladder:
-                force = (0, PLAYER_MOVE_FORCE_ON_GROUND)
-                self.physics_engine.apply_force(self.player_sprite, force)
-                # Set friction to zero for the player while moving
-                self.physics_engine.set_friction(self.player_sprite, 0)
-        elif self.down_pressed and not self.up_pressed:
-            # Create a force to the right. Apply it.
-            if self.player_sprite.is_on_ladder:
-                force = (0, -PLAYER_MOVE_FORCE_ON_GROUND)
-                self.physics_engine.apply_force(self.player_sprite, force)
-                # Set friction to zero for the player while moving
-                self.physics_engine.set_friction(self.player_sprite, 0)
+        elif self.w_pressed and not self.s_pressed:
+            # Create a force to the top, in the opposite direction of the gravity. 
+            # force_dir = rotate90_ccw(self.main_gravity_dir)
+            pass
+        elif self.s_pressed and not self.w_pressed:
+            pass
 
         else:
             # Player's feet are not moving. Therefore up the friction so we stop.
@@ -501,16 +496,10 @@ class GameWindow(arcade.Window):
         """ Draw everything """
         self.clear()
         self.wall_list.draw()
-        self.ladder_list.draw()
         self.moving_sprites_list.draw()
-        self.bullet_list.draw()
         self.item_list.draw()
         self.player_list.draw()
 
-        # for item in self.player_list:
-        #     item.draw_hit_box(arcade.color.RED)
-        # for item in self.item_list:
-        #     item.draw_hit_box(arcade.color.RED)
 
 def main():
     """ Main function """
