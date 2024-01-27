@@ -544,23 +544,26 @@ class GameWindow(arcade.Window):
         gravity_angle = np.arctan2(*self.main_gravity_dir)
         player_object.shape.body.angle = np.pi - gravity_angle
         player_velocity: pymunk.Vec2d = player_object.body.velocity.rotated(gravity_angle)
-        speed = player_velocity.x
+        speed = -player_velocity.x
 
         is_on_ground = self.physics_engine.is_on_ground(self.player_sprite)
         # if is_on_ground:
             # self.physics_engine.get_physics_object(self.player_sprite).body.
         # Update player forces based on keys pressed
         
-        if (is_on_ground and speed >= PLAYER_MAX_WALKING_SPEED) or (not is_on_ground and speed >= PLAYER_MAX_AIRCONTROL_SPEED):
+        # if (is_on_ground and speed >= PLAYER_MAX_WALKING_SPEED) or (not is_on_ground and speed >= PLAYER_MAX_AIRCONTROL_SPEED):
             # Dont'nt allow acceleration if max walking speed has been reached
-            movement_force = 0
-        else:
-            movement_force = PLAYER_MOVE_FORCE_ON_GROUND if is_on_ground else PLAYER_MOVE_FORCE_IN_AIR
+            # movement_force = 0
+        # else:
+        movement_force = PLAYER_MOVE_FORCE_ON_GROUND if is_on_ground else PLAYER_MOVE_FORCE_IN_AIR
+        speed_limit = PLAYER_MAX_WALKING_SPEED if is_on_ground else PLAYER_MAX_AIRCONTROL_SPEED
+        print(speed, speed_limit)
         if self.a_pressed and not self.d_pressed:
             # Create a force to the left, perpendicular to the gravity.
             # Gravity pulls down so this actually needs to be the gravity rotated *clockwise*
             if FORCES_RELATIVE_TO_PLAYER:
-                self.physics_engine.apply_force(self.player_sprite, (-movement_force, 0))
+                if not(speed <= -speed_limit):
+                    self.physics_engine.apply_force(self.player_sprite, (-movement_force, 0))
             else:
                 force_dir = rotate90_cw(self.main_gravity_dir)
                 self.apply_force_to_player(force_dir, PLAYER_MOVE_FORCE_ON_GROUND if is_on_ground else PLAYER_MOVE_FORCE_IN_AIR)
@@ -571,7 +574,8 @@ class GameWindow(arcade.Window):
             # Create a force to the right, perpendicular to the gravity.
             # Gravity pulls down so this actually needs to be the gravity rotated *counterclockwise*
             if FORCES_RELATIVE_TO_PLAYER:
-                self.physics_engine.apply_force(self.player_sprite, (movement_force, 0))
+                if not(speed >= speed_limit):
+                    self.physics_engine.apply_force(self.player_sprite, (movement_force, 0))
             else:
                 force_dir = rotate90_ccw(self.main_gravity_dir)
                 self.apply_force_to_player(force_dir, PLAYER_MOVE_FORCE_ON_GROUND if is_on_ground else PLAYER_MOVE_FORCE_IN_AIR)
