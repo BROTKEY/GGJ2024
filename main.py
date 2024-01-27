@@ -1,9 +1,10 @@
 """
 Example of Pymunk Physics Engine Platformer
 """
-import math
 from typing import Optional
 import arcade
+import pymunk
+
 
 SCREEN_TITLE = "PyMunk Platformer"
 
@@ -203,6 +204,7 @@ class PlayerSprite(arcade.Sprite):
                 self.cur_texture = 0
             self.texture = self.walk_textures[self.cur_texture][self.character_face_direction]
 
+
 class BulletSprite(arcade.SpriteSolidColor):
     """ Bullet Sprite """
     def pymunk_moved(self, physics_engine, dx, dy, d_angle):
@@ -210,6 +212,20 @@ class BulletSprite(arcade.SpriteSolidColor):
         # If the bullet falls below the screen, remove it
         if self.center_y < -100:
             self.remove_from_sprite_lists()
+
+
+class PhysicsSprite(arcade.Sprite):
+    def __init__(self, pymunk_shape, filename):
+        super().__init__(filename, center_x=pymunk_shape.body.position.x, center_y=pymunk_shape.body.position.y)
+        self.pymunk_shape = pymunk_shape
+
+
+class ControllablePlatformSprite(PhysicsSprite):
+    def __init__(self, pymunk_shape, filename, width, height):
+        super().__init__(pymunk_shape, filename)
+        self.width = width
+        self.height = height
+
 
 class GameWindow(arcade.Window):
     """ Main Window """
@@ -230,12 +246,17 @@ class GameWindow(arcade.Window):
         self.item_list: Optional[arcade.SpriteList] = None
         self.moving_sprites_list: Optional[arcade.SpriteList] = None
         self.ladder_list: Optional[arcade.SpriteList] = None
+        self.platform_list: Optional[arcade.SpriteList] = None
 
         # Track the current state of what key is pressed
         self.left_pressed: bool = False
         self.right_pressed: bool = False
         self.up_pressed: bool = False
         self.down_pressed: bool = False
+        self.a_pressed: bool = False
+        self.d_pressed: bool = False
+        self.j_pressed: bool = False
+        self.l_pressed: bool = False
 
         # Physics engine
         self.physics_engine: Optional[arcade.PymunkPhysicsEngine] = None
@@ -249,6 +270,7 @@ class GameWindow(arcade.Window):
         # Create the sprite lists
         self.player_list = arcade.SpriteList()
         self.bullet_list = arcade.SpriteList()
+        self.platform_list = arcade.SpriteList()
 
         # Map name
         map_name = ":resources:/tiled_maps/pymunk_test_map.json"
@@ -260,7 +282,20 @@ class GameWindow(arcade.Window):
         self.wall_list = tile_map.sprite_lists["Platforms"]
         self.item_list = tile_map.sprite_lists["Dynamic Items"]
         self.ladder_list = tile_map.sprite_lists["Ladders"]
-        self.moving_sprites_list = tile_map.sprite_lists['Moving Platforms']
+
+        size = 64
+        mass = 1.0
+        for i in range(2):
+            x = 500 + size * i
+            y = 500
+            moment = pymunk.moment_for_box(mass, (size, size))
+            body = pymunk.Body(mass, moment)
+            body.position = pymunk.Vec2d(x, y)
+            shape = pymunk.Poly.create_box(body, (size, size))
+            shape.elasticity = 0.2
+            shape.friction = 0.9
+            sprite = ControllablePlatformSprite(shape, ":resources:images/tiles/boxCrate_double.png", width=size, height=size)
+            self.platform_list.append(sprite)
 
         # Create player sprite
         self.player_sprite = PlayerSprite(self.ladder_list, hit_box_algorithm="Detailed")
@@ -272,6 +307,12 @@ class GameWindow(arcade.Window):
         self.player_sprite.center_y = SPRITE_SIZE * grid_y + SPRITE_SIZE / 2
         # Add to player sprite list
         self.player_list.append(self.player_sprite)
+
+        # Used for dragging shapes around with the mouse
+        self.platform_left = None
+        self.platform_right = None
+        self.last_mouse_position_left = 0, 0
+        self.last_mouse_position_right = 0, 0
 
         # --- Pymunk Physics Engine Setup ---
 
@@ -298,8 +339,9 @@ class GameWindow(arcade.Window):
 
         def item_hit_handler(bullet_sprite, item_sprite, _arbiter, _space, _data):
             """ Called for bullet/wall collision """
-            bullet_sprite.remove_from_sprite_lists()
-            item_sprite.remove_from_sprite_lists()
+            #bullet_sprite.remove_from_sprite_lists()
+            #item_sprite.remove_from_sprite_lists()
+            pass
 
         self.physics_engine.add_collision_handler("bullet", "item", post_handler=item_hit_handler)
 
@@ -338,93 +380,81 @@ class GameWindow(arcade.Window):
                                             friction=DYNAMIC_ITEM_FRICTION,
                                             collision_type="item")
 
-        # Add kinematic sprites
-        self.physics_engine.add_sprite_list(self.moving_sprites_list,
-                                            body_type=arcade.PymunkPhysicsEngine.KINEMATIC)
+        # add platforms moved by second player
+        self.physics_engine.add_sprite_list(
+            self.platform_list,
+            friction=DYNAMIC_ITEM_FRICTION,
+            collision_type="item"
+        )
 
     def on_key_press(self, key, modifiers):
         """Called whenever a key is pressed. """
-
-        if key == arcade.key.LEFT:
-            self.left_pressed = True
-        elif key == arcade.key.RIGHT:
-            self.right_pressed = True
-        elif key == arcade.key.UP:
-            self.up_pressed = True
-            # find out if player is standing on ground, and not on a ladder
-            if self.physics_engine.is_on_ground(self.player_sprite) \
-                    and not self.player_sprite.is_on_ladder:
-                # She is! Go ahead and jump
-                impulse = (0, PLAYER_JUMP_IMPULSE)
-                self.physics_engine.apply_impulse(self.player_sprite, impulse)
-        elif key == arcade.key.DOWN:
-            self.down_pressed = True
+        match key:
+            case arcade.key.LEFT:
+                self.left_pressed = True
+            case arcade.key.RIGHT:
+                self.right_pressed = True
+            case arcade.key.UP:
+                self.up_pressed = True
+                # find out if player is standing on ground, and not on a ladder
+                if self.physics_engine.is_on_ground(self.player_sprite) \
+                        and not self.player_sprite.is_on_ladder:
+                    # She is! Go ahead and jump
+                    impulse = (0, PLAYER_JUMP_IMPULSE)
+                    self.physics_engine.apply_impulse(self.player_sprite, impulse)
+            case arcade.key.DOWN:
+                self.down_pressed = True
+            case arcade.key.A:
+                self.a_pressed = True
+            case arcade.key.D:
+                self.d_pressed = True
+            case arcade.key.J:
+                self.j_pressed = True
+            case arcade.key.L:
+                self.l_pressed = True
 
     def on_key_release(self, key, modifiers):
         """Called when the user releases a key. """
-
-        if key == arcade.key.LEFT:
-            self.left_pressed = False
-        elif key == arcade.key.RIGHT:
-            self.right_pressed = False
-        elif key == arcade.key.UP:
-            self.up_pressed = False
-        elif key == arcade.key.DOWN:
-            self.down_pressed = False
+        match key:
+            case arcade.key.LEFT:
+                self.left_pressed = False
+            case arcade.key.RIGHT:
+                self.right_pressed = False
+            case arcade.key.UP:
+                self.up_pressed = False
+            case arcade.key.DOWN:
+                self.down_pressed = False
+            case arcade.key.A:
+                self.a_pressed = False
+            case arcade.key.D:
+                self.d_pressed = False
+            case arcade.key.J:
+                self.j_pressed = False
+            case arcade.key.L:
+                self.l_pressed = False
 
     def on_mouse_press(self, x, y, button, modifiers):
         """ Called whenever the mouse button is clicked. """
+        match button:
+            case arcade.MOUSE_BUTTON_LEFT:
+                self.last_mouse_position_left = x, y
+                self.platform_left = self.platform_list[0]
+            case arcade.MOUSE_BUTTON_RIGHT:
+                self.last_mouse_position_right = x, y
+                self.platform_right = self.platform_list[1]
 
-        bullet = BulletSprite(20, 5, arcade.color.DARK_YELLOW)
-        self.bullet_list.append(bullet)
+    def on_mouse_release(self, x, y, button, modifiers):
+        match button:
+            case arcade.MOUSE_BUTTON_LEFT:
+                self.platform_left = None
+            case arcade.MOUSE_BUTTON_RIGHT:
+                self.platform_right = None
 
-        # Position the bullet at the player's current location
-        start_x = self.player_sprite.center_x
-        start_y = self.player_sprite.center_y
-        bullet.position = self.player_sprite.position
-
-        # Get from the mouse the destination location for the bullet
-        # IMPORTANT! If you have a scrolling screen, you will also need
-        # to add in self.view_bottom and self.view_left.
-        dest_x = x
-        dest_y = y
-
-        # Do math to calculate how to get the bullet to the destination.
-        # Calculation the angle in radians between the start points
-        # and end points. This is the angle the bullet will travel.
-        x_diff = dest_x - start_x
-        y_diff = dest_y - start_y
-        angle = math.atan2(y_diff, x_diff)
-
-        # What is the 1/2 size of this sprite, so we can figure out how far
-        # away to spawn the bullet
-        size = max(self.player_sprite.width, self.player_sprite.height) / 2
-
-        # Use angle to to spawn bullet away from player in proper direction
-        bullet.center_x += size * math.cos(angle)
-        bullet.center_y += size * math.sin(angle)
-
-        # Set angle of bullet
-        bullet.angle = math.degrees(angle)
-
-        # Gravity to use for the bullet
-        # If we don't use custom gravity, bullet drops too fast, or we have
-        # to make it go too fast.
-        # Force is in relation to bullet's angle.
-        bullet_gravity = (0, -BULLET_GRAVITY)
-
-        # Add the sprite. This needs to be done AFTER setting the fields above.
-        self.physics_engine.add_sprite(bullet,
-                                       mass=BULLET_MASS,
-                                       damping=1.0,
-                                       friction=0.6,
-                                       collision_type="bullet",
-                                       gravity=bullet_gravity,
-                                       elasticity=0.9)
-
-        # Add force to bullet
-        force = (BULLET_MOVE_FORCE, 0)
-        self.physics_engine.apply_force(bullet, force)
+    def on_mouse_motion(self, x, y, dx, dy):
+        if self.platform_left is not None:
+            self.physics_engine.set_position(self.platform_left, (x, y))
+        if self.platform_right is not None:
+            self.physics_engine.set_position(self.platform_right, (x, y))
 
     def on_update(self, delta_time):
         """ Movement and game logic """
@@ -463,46 +493,33 @@ class GameWindow(arcade.Window):
                 self.physics_engine.apply_force(self.player_sprite, force)
                 # Set friction to zero for the player while moving
                 self.physics_engine.set_friction(self.player_sprite, 0)
-
         else:
             # Player's feet are not moving. Therefore up the friction so we stop.
             self.physics_engine.set_friction(self.player_sprite, 1.0)
 
+        if self.a_pressed:
+            for item in self.platform_list:
+                self.physics_engine.apply_force(item, (-5000, 3000))
+        if self.d_pressed:
+            for item in self.platform_list:
+                self.physics_engine.apply_force(item, (5000, -3000))
+
+        # If we are dragging an object, make sure it stays with the mouse. Otherwise
+        # gravity will drag it down.
+        if self.platform_left is not None:
+            self.physics_engine.set_velocity(self.platform_left, (0, 0))
+        if self.platform_right is not None:
+            self.physics_engine.set_velocity(self.platform_right, (0, 0))
+
         # Move items in the physics engine
         self.physics_engine.step()
-
-        # For each moving sprite, see if we've reached a boundary and need to
-        # reverse course.
-        for moving_sprite in self.moving_sprites_list:
-            if moving_sprite.boundary_right and \
-                    moving_sprite.change_x > 0 and \
-                    moving_sprite.right > moving_sprite.boundary_right:
-                moving_sprite.change_x *= -1
-            elif moving_sprite.boundary_left and \
-                    moving_sprite.change_x < 0 and \
-                    moving_sprite.left > moving_sprite.boundary_left:
-                moving_sprite.change_x *= -1
-            if moving_sprite.boundary_top and \
-                    moving_sprite.change_y > 0 and \
-                    moving_sprite.top > moving_sprite.boundary_top:
-                moving_sprite.change_y *= -1
-            elif moving_sprite.boundary_bottom and \
-                    moving_sprite.change_y < 0 and \
-                    moving_sprite.bottom < moving_sprite.boundary_bottom:
-                moving_sprite.change_y *= -1
-
-            # Figure out and set our moving platform velocity.
-            # Pymunk uses velocity is in pixels per second. If we instead have
-            # pixels per frame, we need to convert.
-            velocity = (moving_sprite.change_x * 1 / delta_time, moving_sprite.change_y * 1 / delta_time)
-            self.physics_engine.set_velocity(moving_sprite, velocity)
 
     def on_draw(self):
         """ Draw everything """
         self.clear()
         self.wall_list.draw()
         self.ladder_list.draw()
-        self.moving_sprites_list.draw()
+        self.platform_list.draw()
         self.bullet_list.draw()
         self.item_list.draw()
         self.player_list.draw()
@@ -511,6 +528,7 @@ class GameWindow(arcade.Window):
         #     item.draw_hit_box(arcade.color.RED)
         # for item in self.item_list:
         #     item.draw_hit_box(arcade.color.RED)
+
 
 def main():
     """ Main function """
