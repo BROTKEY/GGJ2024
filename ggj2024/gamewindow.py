@@ -71,8 +71,6 @@ class GameWindow(arcade.Window):
 
         self.current_level = list(LEVEL)[1]
 
-        self.camera = arcade.Camera(width, height)
-
         self.leap_motion = leap_motion
 
         # Loading the audio file
@@ -97,10 +95,17 @@ class GameWindow(arcade.Window):
 
         # Map name
         map_name = "resources/tiled_maps/Level1.json"
-        # map_name = "resources/tiled_maps/test_map_1.json"
+        #map_name = "resources/tiled_maps/gravity_test.json"
 
         # Load in TileMap
         tile_map = arcade.load_tilemap(map_name, SPRITE_SCALING_TILES)
+
+        self.map_bounds_x = tile_map.width * tile_map.tile_width * tile_map.scaling
+        self.map_bounds_y = tile_map.height * tile_map.tile_height * tile_map.scaling
+
+        self.width = int(min(self.width, self.map_bounds_x))
+        self.height = int(min(self.height, self.map_bounds_y))
+        self.camera = arcade.Camera(self.width, self.height)
 
         # Pull the sprite layers out of the tile map
         self.wall_list = tile_map.sprite_lists["Platforms"]
@@ -204,9 +209,14 @@ class GameWindow(arcade.Window):
                                             friction=DYNAMIC_ITEM_FRICTION,
                                             collision_type="item")
         
-        self.physics_engine.add_sprite_list(self.background_list, 
-                                            collision_type="background", 
+        self.physics_engine.add_sprite_list(self.background_list,
+                                            collision_type="background",
                                             body_type=arcade.PymunkPhysicsEngine.STATIC)
+    
+        self.physics_engine.add_sprite_list(self.soft_list,
+                                            collision_type='soft',
+                                            body_type=arcade.PymunkPhysicsEngine.STATIC,
+                                            elasticity=1.0)
         
         self.physics_engine.add_sprite_list(self.finish_list,
                                             collision_type='finish',
@@ -398,12 +408,12 @@ class GameWindow(arcade.Window):
             if self.platform_left:
                 lx = self.hands.left_hand.x
                 ly = self.hands.left_hand.y
-                pos = (500 + lx, ly)
+                pos = (self.camera.position.x + self.width/2 + lx, self.camera.position.y + ly)
                 self.physics_engine.set_position(self.platform_left, pos)
             if self.platform_right:
                 rx = self.hands.right_hand.x
                 ry = self.hands.right_hand.y
-                pos = (500 + rx, ry)
+                pos = (self.camera.position.x + self.width/2 + rx, self.camera.position.y + ry)
                 self.physics_engine.set_position(self.platform_right, pos)
         else:
             # update platform position based on mouse input
@@ -579,9 +589,14 @@ class GameWindow(arcade.Window):
         pan.
         """
 
-        position = pymunk.Vec2d(self.player_sprite.center_x - self.camera.viewport_width / 2,
-                        self.player_sprite.center_y - self.height / 2)
-        self.camera.move_to(position, CAMERA_SPEED)
+        map_bounds = np.array([self.map_bounds_x, self.map_bounds_y])
+        camera_size = np.array([self.camera.viewport_width, self.camera.viewport_height])
+
+        target_position = np.array([self.player_sprite.center_x - self.width / 2,
+                        self.player_sprite.center_y - self.height / 2])
+        target_position = np.max([target_position, np.zeros(2)], axis=0)
+        target_position = np.min([target_position, map_bounds-camera_size], axis=0)
+        self.camera.move_to(pymunk.Vec2d(*tuple(target_position)), CAMERA_SPEED)
 
     def on_draw(self):
         """ Draw everything """
@@ -592,4 +607,5 @@ class GameWindow(arcade.Window):
         self.platform_list.draw()
         self.item_list.draw()
         self.player_list.draw()
+        self.soft_list.draw()
         self.particle_list.draw()

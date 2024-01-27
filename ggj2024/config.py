@@ -11,7 +11,7 @@ SPRITE_SCALING_TILES = 0.5
 SPRITE_SIZE = int(SPRITE_IMAGE_SIZE * SPRITE_SCALING_PLAYER)
 
 # Size of grid to show on screen, in number of tiles
-SCREEN_GRID_WIDTH = 32
+SCREEN_GRID_WIDTH = 25
 SCREEN_GRID_HEIGHT = 12
 
 # Size of screen to show, in pixels
@@ -19,12 +19,12 @@ SCREEN_WIDTH = SPRITE_SIZE * SCREEN_GRID_WIDTH
 SCREEN_HEIGHT = SPRITE_SIZE * SCREEN_GRID_HEIGHT
 
 # How fast the camera scrolls
-CAMERA_SPEED = 1
+CAMERA_SPEED = 0.5
 
 # --- Physics forces. Higher number, faster accelerating.
 
 # Gravity
-GRAVITY = 2500
+GRAVITY = 2000
 
 # Damping - Amount of speed lost per second
 DEFAULT_DAMPING = 1.0
@@ -39,8 +39,8 @@ DYNAMIC_ITEM_FRICTION = 0.6
 PLAYER_MASS = 2.0
 
 # Keep player from going too fast
-PLAYER_MAX_HORIZONTAL_SPEED = 10000
-PLAYER_MAX_VERTICAL_SPEED = 10000
+PLAYER_MAX_HORIZONTAL_SPEED = 5000
+PLAYER_MAX_VERTICAL_SPEED = 5000
 
 # Force applied while on the ground
 PLAYER_MOVE_FORCE_ON_GROUND = 8000
@@ -50,7 +50,7 @@ PLAYER_MOVE_FORCE_IN_AIR = 5000
 # Strength of a jump
 PLAYER_JUMP_IMPULSE = 1500
 
-PLAYER_DEATH_IMPULSE = 2000
+PLAYER_DEATH_IMPULSE = 3000
 
 # Close enough to not-moving to have the animation go to idle.
 DEAD_ZONE = 0.1
