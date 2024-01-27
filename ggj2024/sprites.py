@@ -1,6 +1,9 @@
 import arcade
 
 from ggj2024.config import *
+import pymunk
+import numpy as np
+
 
 
 class PlayerSprite(arcade.Sprite):
@@ -104,3 +107,37 @@ class ControllablePlatformSprite(PhysicsSprite):
         super().__init__(pymunk_shape, filename)
         self.width = width
         self.height = height
+
+
+class DummyBoxSprite(PhysicsSprite):
+    def __init__(self, x, y, size, mass):
+        moment = pymunk.moment_for_box(mass, (size, size))
+        body = pymunk.Body(mass, moment)
+        body.position = pymunk.Vec2d(x, y)
+        shape = pymunk.Poly.create_box(body, (size, size))
+        shape.elasticity = 0.2
+        shape.friction = 0.9
+        super().__init__(shape, ":resources:images/tiles/boxCrate_double.png")
+        self.width = size
+        self.height = size
+
+
+class ParticleSprite(arcade.Sprite):
+    PARTICLE_COUNT = 0
+    COLOR_VARIATION = 50
+
+    def __init__(self, x, y, radius, mass=1):
+        self.texture_name = f'particle_{ParticleSprite.PARTICLE_COUNT}'
+        ParticleSprite.PARTICLE_COUNT += 1
+        color_var = int(np.random.random() * ParticleSprite.COLOR_VARIATION)
+        if np.random.rand() < 0.5:
+            color = (255 - color_var, 0, 0)
+        else:
+            color = (255, color_var, color_var)
+        print(color)
+        diameter = int(2*radius)
+        texture = arcade.make_circle_texture(diameter, color, self.texture_name)
+        super().__init__(center_x=x, center_y=y, texture=texture)
+        self.radius = radius
+        self.width = 2*radius
+        self.height = 2*radius
