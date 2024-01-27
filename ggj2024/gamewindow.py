@@ -43,7 +43,7 @@ class GameWindow(arcade.Window):
         self.platform_list: Optional[arcade.SpriteList] = None
         self.particle_list: Optional[arcade.SpriteList] = None
         self.background_list: Optional[arcade.SpriteList] = None
-
+        self.soft_list: Optional[arcade.SpriteList] = None
 
         # Track the current state of what key is pressed
         self.a_pressed: bool = False
@@ -88,10 +88,8 @@ class GameWindow(arcade.Window):
 
         # Create the sprite lists
         self.player_list = arcade.SpriteList()
-        self.bullet_list = arcade.SpriteList()
         self.platform_list = arcade.SpriteList()
         self.particle_list = arcade.SpriteList()
-        self.background_list = arcade.SpriteList()
 
 
         # Map name
@@ -105,6 +103,7 @@ class GameWindow(arcade.Window):
         self.wall_list = tile_map.sprite_lists["Platforms"]
         self.item_list = tile_map.sprite_lists["Dynamic Items"]
         self.background_list = tile_map.sprite_lists["Background"]
+        self.soft_list = tile_map.sprite_lists['Soft']
 
         # player-controlled platforms
         size = 64
@@ -195,7 +194,9 @@ class GameWindow(arcade.Window):
                                             friction=DYNAMIC_ITEM_FRICTION,
                                             collision_type="item")
         
-        self.physics_engine.add_sprite_list(self.background_list, collision_type="wall", body_type=arcade.PymunkPhysicsEngine.STATIC)
+        self.physics_engine.add_sprite_list(self.background_list, 
+                                            collision_type="background", 
+                                            body_type=arcade.PymunkPhysicsEngine.STATIC)
 
         # add platforms moved by second player
         self.physics_engine.add_sprite_list(
@@ -272,7 +273,13 @@ class GameWindow(arcade.Window):
 
         self.physics_engine.add_collision_handler('particle', 'wall', post_handler=handle_particle_x_collision)
         self.physics_engine.add_collision_handler('particle', 'item', post_handler=handle_particle_x_collision)
+        self.physics_engine.add_collision_handler('particle', 'background', post_handler=handle_particle_x_collision)
+        self.physics_engine.add_collision_handler('particle', 'soft', post_handler=handle_particle_x_collision)
         self.physics_engine.add_collision_handler('particle', 'player', pre_handler=lambda *args: False)
+        self.physics_engine.add_collision_handler('particle', 'background', post_handler=handle_particle_x_collision)
+
+        self.physics_engine.add_collision_handler('background', 'player', pre_handler=lambda *args: False)
+        self.physics_engine.add_collision_handler('background', 'item', pre_handler=lambda *args: False)
 
     @property
     def main_gravity(self):
@@ -553,9 +560,9 @@ class GameWindow(arcade.Window):
         """ Draw everything """
         self.clear()
         self.camera.use()
+        self.background_list.draw()
         self.wall_list.draw()
         self.platform_list.draw()
         self.item_list.draw()
         self.player_list.draw()
         self.particle_list.draw()
-        self.background_list.draw()
