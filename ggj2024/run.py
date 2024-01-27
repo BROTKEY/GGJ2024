@@ -13,6 +13,10 @@ def main():
     """ Main function """
     window = GameWindow(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, leap_motion=not args.debug)
     window.setup()
-    arcade.run()
-    # HACK: do this automatically when window closes
-    window.hands.stop()
+    # HACK: close hands server in better way
+    try:
+        arcade.run()
+        window.hands.stop()
+    except KeyboardInterrupt:
+        window.hands.stop()
+        raise
