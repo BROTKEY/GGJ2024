@@ -253,10 +253,6 @@ class GameWindow(arcade.Window):
         self.right_pressed: bool = False
         self.up_pressed: bool = False
         self.down_pressed: bool = False
-        self.a_pressed: bool = False
-        self.d_pressed: bool = False
-        self.j_pressed: bool = False
-        self.l_pressed: bool = False
 
         # Physics engine
         self.physics_engine: Optional[arcade.PymunkPhysicsEngine] = None
@@ -405,14 +401,6 @@ class GameWindow(arcade.Window):
                     self.physics_engine.apply_impulse(self.player_sprite, impulse)
             case arcade.key.DOWN:
                 self.down_pressed = True
-            case arcade.key.A:
-                self.a_pressed = True
-            case arcade.key.D:
-                self.d_pressed = True
-            case arcade.key.J:
-                self.j_pressed = True
-            case arcade.key.L:
-                self.l_pressed = True
 
     def on_key_release(self, key, modifiers):
         """Called when the user releases a key. """
@@ -425,14 +413,6 @@ class GameWindow(arcade.Window):
                 self.up_pressed = False
             case arcade.key.DOWN:
                 self.down_pressed = False
-            case arcade.key.A:
-                self.a_pressed = False
-            case arcade.key.D:
-                self.d_pressed = False
-            case arcade.key.J:
-                self.j_pressed = False
-            case arcade.key.L:
-                self.l_pressed = False
 
     def on_mouse_press(self, x, y, button, modifiers):
         """ Called whenever the mouse button is clicked. """
@@ -497,13 +477,6 @@ class GameWindow(arcade.Window):
         else:
             # Player's feet are not moving. Therefore up the friction so we stop.
             self.physics_engine.set_friction(self.player_sprite, 1.0)
-
-        if self.a_pressed:
-            for item in self.platform_list:
-                self.physics_engine.apply_force(item, (-5000, 3000))
-        if self.d_pressed:
-            for item in self.platform_list:
-                self.physics_engine.apply_force(item, (5000, -3000))
 
         # Move items in the physics engine
         self.physics_engine.step()
