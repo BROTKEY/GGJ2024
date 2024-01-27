@@ -107,6 +107,9 @@ class GameWindow(arcade.Window):
         # Load in TileMap
         tile_map = arcade.load_tilemap(map_name, SPRITE_SCALING_TILES)
 
+        self.map_bounds_x = tile_map.width * tile_map.tile_width * tile_map.scaling
+        self.map_bounds_y = tile_map.height * tile_map.tile_height * tile_map.scaling
+
         # Pull the sprite layers out of the tile map
         self.wall_list = tile_map.sprite_lists["Platforms"]
         self.item_list = tile_map.sprite_lists["Dynamic Items"]
@@ -458,9 +461,14 @@ class GameWindow(arcade.Window):
         pan.
         """
 
-        position = pymunk.Vec2d(self.player_sprite.center_x - self.camera.viewport_width / 2,
-                        self.player_sprite.center_y - self.height / 2)
-        self.camera.move_to(position, CAMERA_SPEED)
+        map_bounds = np.array([self.map_bounds_x, self.map_bounds_y])
+        camera_size = np.array([self.camera.viewport_width, self.camera.viewport_height])
+
+        target_position = np.array([self.player_sprite.center_x - self.width / 2,
+                        self.player_sprite.center_y - self.height / 2])
+        target_position = np.max([target_position, np.zeros(2)], axis=0)
+        target_position = np.min([target_position, map_bounds-camera_size], axis=0)
+        self.camera.move_to(pymunk.Vec2d(*tuple(target_position)), CAMERA_SPEED)
 
     def on_draw(self):
         """ Draw everything """
