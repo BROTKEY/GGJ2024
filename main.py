@@ -288,13 +288,13 @@ class GameWindow(arcade.Window):
         for i in range(2):
             x = 500 + size * i
             y = 500
-            moment = pymunk.moment_for_box(mass, (size, size))
+            moment = pymunk.moment_for_box(mass, (size, 2*size))
             body = pymunk.Body(mass, moment)
             body.position = pymunk.Vec2d(x, y)
-            shape = pymunk.Poly.create_box(body, (size, size))
+            shape = pymunk.Poly.create_box(body, (size, 2*size))
             shape.elasticity = 0.2
             shape.friction = 0.9
-            sprite = ControllablePlatformSprite(shape, ":resources:images/tiles/boxCrate_double.png", width=size, height=size)
+            sprite = ControllablePlatformSprite(shape, ":resources:images/tiles/boxCrate_double.png", width=2*size, height=size)
             self.platform_list.append(sprite)
 
         # Create player sprite
