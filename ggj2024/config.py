@@ -11,12 +11,15 @@ SPRITE_SCALING_TILES = 0.5
 SPRITE_SIZE = int(SPRITE_IMAGE_SIZE * SPRITE_SCALING_PLAYER)
 
 # Size of grid to show on screen, in number of tiles
-SCREEN_GRID_WIDTH = 10
-SCREEN_GRID_HEIGHT = 10
+SCREEN_GRID_WIDTH = 32
+SCREEN_GRID_HEIGHT = 12
 
 # Size of screen to show, in pixels
 SCREEN_WIDTH = SPRITE_SIZE * SCREEN_GRID_WIDTH
 SCREEN_HEIGHT = SPRITE_SIZE * SCREEN_GRID_HEIGHT
+
+# How fast the camera scrolls
+CAMERA_SPEED = 0.5
 
 # --- Physics forces. Higher number, faster accelerating.
 

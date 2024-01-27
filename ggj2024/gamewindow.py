@@ -68,6 +68,8 @@ class GameWindow(arcade.Window):
 
         self.current_level = list(LEVEL)[1]
 
+        self.camera = arcade.Camera(width, height)
+
         self.leap_motion = leap_motion
 
         # Loading the audio file
@@ -89,11 +91,14 @@ class GameWindow(arcade.Window):
         self.particle_list = arcade.SpriteList()
 
         # Map name
-        map_name = "resources/tiled_maps/gravity_test.json"
+        map_name = "resources/tiled_maps/Level1.json"
         # map_name = "resources/tiled_maps/test_map_1.json"
 
         # Load in TileMap
         tile_map = arcade.load_tilemap(map_name, SPRITE_SCALING_TILES)
+
+        self.map_bounds_x = tile_map.width * tile_map.tile_width * tile_map.scaling
+        self.map_bounds_y = tile_map.height * tile_map.tile_height * tile_map.scaling
 
         # Pull the sprite layers out of the tile map
         self.wall_list = tile_map.sprite_lists["Platforms"]
@@ -522,12 +527,33 @@ class GameWindow(arcade.Window):
         self.update_gravity(hand_gesture_update=True)
         self.update_platforms()
 
+        self.scroll_to_player()
+
         # Move items in the physics engine
         self.physics_engine.step()
+
+    def scroll_to_player(self):
+        """
+        Scroll the window to the player.
+
+        if CAMERA_SPEED is 1, the camera will immediately move to the desired position.
+        Anything between 0 and 1 will have the camera move to the location with a smoother
+        pan.
+        """
+
+        map_bounds = np.array([self.map_bounds_x, self.map_bounds_y])
+        camera_size = np.array([self.camera.viewport_width, self.camera.viewport_height])
+
+        target_position = np.array([self.player_sprite.center_x - self.width / 2,
+                        self.player_sprite.center_y - self.height / 2])
+        target_position = np.max([target_position, np.zeros(2)], axis=0)
+        target_position = np.min([target_position, map_bounds-camera_size], axis=0)
+        self.camera.move_to(pymunk.Vec2d(*tuple(target_position)), CAMERA_SPEED)
 
     def on_draw(self):
         """ Draw everything """
         self.clear()
+        self.camera.use()
         self.wall_list.draw()
         self.platform_list.draw()
         self.item_list.draw()
