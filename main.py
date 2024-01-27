@@ -66,6 +66,9 @@ LEFT_FACING = 1
 # How many pixels to move before we change the texture in the walking animation
 DISTANCE_TO_CHANGE_TEXTURE = 20
 
+# Defines whether forces on the player are considered to be in the Player's coordinate system
+# This switch is basically here to keep some of the old code...
+FORCES_RELATIVE_TO_PLAYER = True
 
 
 def normalize_vector(vec: np.ndarray, inplace=False) -> np.ndarray:
@@ -244,7 +247,15 @@ class GameWindow(arcade.Window):
             self._main_gravity = grav
         else:
             self._main_gravity = np.array(grav, dtype='float')
-        self._main_gravity_direction = normalize_vector(self._main_gravity)
+        # Don't try to get the length of a zero vector
+        if np.any(self._main_gravity):
+            self._main_gravity_direction = normalize_vector(self._main_gravity)
+        else:
+            # Don't allow zero gravity. Set it to what it was before instead, just very small
+            print('DEBUG: It was attempted to set gravity to 0, setting it to a very low value instead')
+            self._main_gravity = self._main_gravity_direction * 1e-9
+            # No need to set direction vector as it didn't change
+            # self._main_gravity_direction = np.zeros((2, ))
         if self.physics_engine:
             self.physics_engine.space.gravity = tuple(self._main_gravity)
 
@@ -360,8 +371,11 @@ class GameWindow(arcade.Window):
             self.space_pressed = True
             # find out if player is standing on ground
             if self.physics_engine.is_on_ground(self.player_sprite):
-                impulse = -self.main_gravity / np.linalg.norm(self.main_gravity)  * PLAYER_JUMP_IMPULSE
-                impulse = tuple(impulse)
+                if FORCES_RELATIVE_TO_PLAYER:
+                    impulse = (0, PLAYER_JUMP_IMPULSE)
+                else:
+                    impulse = -self.main_gravity / np.linalg.norm(self.main_gravity)  * PLAYER_JUMP_IMPULSE
+                    impulse = tuple(impulse)
                 self.physics_engine.apply_impulse(self.player_sprite, impulse)
         
         # Gravity modifier
@@ -436,19 +450,26 @@ class GameWindow(arcade.Window):
 
         is_on_ground = self.physics_engine.is_on_ground(self.player_sprite)
         # Update player forces based on keys pressed
+        movement_force = PLAYER_MOVE_FORCE_ON_GROUND if is_on_ground else PLAYER_MOVE_FORCE_IN_AIR
         if self.a_pressed and not self.d_pressed:
             # Create a force to the left, perpendicular to the gravity. 
             # Gravity pulls down so this actually needs to be the gravity rotated *clockwise*
-            force_dir = rotate90_cw(self.main_gravity_dir)
-            self.apply_force_to_player(force_dir, PLAYER_MOVE_FORCE_ON_GROUND if is_on_ground else PLAYER_MOVE_FORCE_IN_AIR)
+            if FORCES_RELATIVE_TO_PLAYER:
+                self.physics_engine.apply_force(self.player_sprite, (-movement_force, 0))
+            else:
+                force_dir = rotate90_cw(self.main_gravity_dir)
+                self.apply_force_to_player(force_dir, PLAYER_MOVE_FORCE_ON_GROUND if is_on_ground else PLAYER_MOVE_FORCE_IN_AIR)
             # Set friction to zero for the player while moving
             # TODO: is this really a good idea?
             self.physics_engine.set_friction(self.player_sprite, 0)
         elif self.d_pressed and not self.a_pressed:
             # Create a force to the right, perpendicular to the gravity. 
             # Gravity pulls down so this actually needs to be the gravity rotated *counterclockwise*
-            force_dir = rotate90_ccw(self.main_gravity_dir)
-            self.apply_force_to_player(force_dir, PLAYER_MOVE_FORCE_ON_GROUND if is_on_ground else PLAYER_MOVE_FORCE_IN_AIR)
+            if FORCES_RELATIVE_TO_PLAYER:
+                self.physics_engine.apply_force(self.player_sprite, (movement_force, 0))
+            else:
+                force_dir = rotate90_ccw(self.main_gravity_dir)
+                self.apply_force_to_player(force_dir, PLAYER_MOVE_FORCE_ON_GROUND if is_on_ground else PLAYER_MOVE_FORCE_IN_AIR)
             # Set friction to zero for the player while moving
             # TODO: is this really a good idea?
             self.physics_engine.set_friction(self.player_sprite, 0)
@@ -462,6 +483,9 @@ class GameWindow(arcade.Window):
         else:
             # Player's feet are not moving. Therefore up the friction so we stop.
             self.physics_engine.set_friction(self.player_sprite, 1.0)
+
+        self.physics_engine.get_physics_object(self.player_sprite).shape.body.angle = np.pi - np.arctan2(*self.main_gravity_dir)
+        print(np.arctan2(*self.main_gravity_dir))
 
         # Move items in the physics engine
         self.physics_engine.step()
