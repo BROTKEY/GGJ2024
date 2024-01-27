@@ -118,3 +118,17 @@ class DummyBoxSprite(PhysicsSprite):
         super().__init__(shape, ":resources:images/tiles/boxCrate_double.png")
         self.width = size
         self.height = size
+
+
+class ParticleSprite(arcade.Sprite):
+    TEXTURE = None
+
+    def __init__(self, filename, x, y, radius, mass=1):
+        moment = pymunk.moment_for_circle(mass, radius/2, radius)
+        body = pymunk.Body(mass, moment)
+        body.position = pymunk.Vec2d(x, y)
+        shape = pymunk.Circle(body, radius, (0, 0))
+        super().__init__(shape, filename)
+        self.radius = radius
+        self.width = 2*radius
+        self.height = 2*radius

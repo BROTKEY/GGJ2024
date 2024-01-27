@@ -2,13 +2,14 @@ import arcade
 import pymunk
 
 import numpy as np
+from PIL import Image
 
 from typing import Optional
 
 from ggj2024.HandReceiver import HandReceiver
 from ggj2024.config import *
 from ggj2024.utils import normalize_vector, rotate90_cw, rotate90_ccw
-from ggj2024.sprites import PlayerSprite, PhysicsSprite, ControllablePlatformSprite, DummyBoxSprite
+from ggj2024.sprites import ParticleSprite, PlayerSprite, PhysicsSprite, ControllablePlatformSprite, DummyBoxSprite
 
 
 class GameWindow(arcade.Window):
@@ -32,6 +33,7 @@ class GameWindow(arcade.Window):
         self.item_list: Optional[arcade.SpriteList] = None
         self.moving_sprites_list: Optional[arcade.SpriteList] = None
         self.platform_list: Optional[arcade.SpriteList] = None
+        self.particle_list: Optional[arcade.SpriteList] = None
 
         # Track the current state of what key is pressed
         self.a_pressed: bool = False
@@ -48,38 +50,14 @@ class GameWindow(arcade.Window):
         self.down_pressed: bool = False
 
         self.main_gravity = np.array([0, -GRAVITY], dtype='float')
-        self.hands = HandReceiver()
+        self.hands = HandReceiver()#
+
+        self.splatter_texture_dict: dict[arcade.Sprite, Image.Image] = dict()
+        self.splatter_counter = 0
 
         # Set background color
         arcade.set_background_color(arcade.color.AMAZON)
-
-
-    @property
-    def main_gravity(self):
-        return self._main_gravity
-
-    @main_gravity.setter
-    def main_gravity(self, grav):
-        if isinstance(grav, np.ndarray):
-            self._main_gravity = grav
-        else:
-            self._main_gravity = np.array(grav, dtype='float')
-        # Don't try to get the length of a zero vector
-        if np.any(self._main_gravity):
-            self._main_gravity_direction = normalize_vector(self._main_gravity)
-        else:
-            # Don't allow zero gravity. Set it to what it was before instead, just very small
-            print('DEBUG: It was attempted to set gravity to 0, setting it to a very low value instead')
-            self._main_gravity = self._main_gravity_direction * 1e-9
-            # No need to set direction vector as it didn't change
-            # self._main_gravity_direction = np.zeros((2, ))
-        if self.physics_engine:
-            self.physics_engine.space.gravity = tuple(self._main_gravity)
-
-    @property
-    def main_gravity_dir(self):
-        """The direction (= normalized vector) of the main gravity"""
-        return self._main_gravity_direction
+        
 
     def setup(self):
         """ Set up everything with the game """
@@ -88,6 +66,7 @@ class GameWindow(arcade.Window):
         self.player_list = arcade.SpriteList()
         self.bullet_list = arcade.SpriteList()
         self.platform_list = arcade.SpriteList()
+        self.particle_list = arcade.SpriteList()
 
         # Map name
         map_name = "resources/tiled_maps/gravity_test.json"
@@ -203,6 +182,7 @@ class GameWindow(arcade.Window):
                 print('wall collision, impulse =', impulse.length)
             if impulse.length > PLAYER_DEATH_IMPULSE:
                 print(f'died from item (impulse={impulse.length})')
+                self.kill_player('Wall collision')
 
         def handle_player_item_collision(player_sprite: PlayerSprite, item_sprite: arcade.Sprite, arbiter: pymunk.Arbiter, space, data):
             impulse: pymunk.Vec2d = arbiter.total_impulse
@@ -213,6 +193,102 @@ class GameWindow(arcade.Window):
 
         self.physics_engine.add_collision_handler('player', 'wall', post_handler=handle_player_wall_collision)
         self.physics_engine.add_collision_handler('player', 'item', post_handler=handle_player_item_collision)
+
+        def handle_particle_x_collision(particle: ParticleSprite, other: arcade.Sprite, arbiter: pymunk.Arbiter, space, data):
+            self.physics_engine.remove_sprite(particle)
+            self.particle_list.remove(particle)
+            # contacts: pymunk.ContactPointSet = arbiter.contact_point_set
+            # position yields center of object, we need corner
+            other_pos = pymunk.Vec2d(
+                other.position[0] - other.width/2,
+                other.position[1] - other.height/2)
+            contact: pymunk.ContactPoint = arbiter.contact_point_set.points[0].point_b
+            contact_rel: pymunk.Vec2d = contact - other_pos
+            
+            if other in self.splatter_texture_dict:
+                image = self.splatter_texture_dict[other]
+            else:
+                image = other.texture.image.copy()
+            tex_name = f'splatter_{self.splatter_counter}'
+            self.splatter_counter += 1
+            scale = image.width / other.width
+            splatter = particle.texture.image
+            splat_size = int(5*particle.radius)
+            splatter = splatter.resize((splat_size, splat_size))
+            contact_rel *= scale
+            # Make it apply to a little bit smaller region so that particles will be visible
+            x = contact_rel.x
+            y = image.height - contact_rel.y
+            x = 0.9 * x
+            y = 0.9 * y
+            x += 0.05 * image.width
+            y += 0.05 * image.height
+            x = int(x)
+            y = int(y)
+
+            # Create alpha mask of original image, multiply it with that
+            alphamask = np.array(image)[:,:,3:4].astype('float')/255.
+            alphamask = np.ceil(alphamask)
+            image.paste(splatter, (x, y, x+splat_size, y+splat_size), splatter)
+            pixdata = np.array(image)
+            masked = pixdata * alphamask
+            image = Image.fromarray(masked.astype('uint8'))
+
+            self.splatter_texture_dict[other] = image
+            texture = arcade.Texture(tex_name, image)
+            other.texture = texture
+
+        
+        self.physics_engine.add_collision_handler('particle', 'wall', post_handler=handle_particle_x_collision)
+        self.physics_engine.add_collision_handler('particle', 'item', post_handler=handle_particle_x_collision)
+
+
+    @property
+    def main_gravity(self):
+        return self._main_gravity
+
+    @main_gravity.setter
+    def main_gravity(self, grav):
+        if isinstance(grav, np.ndarray):
+            self._main_gravity = grav
+        else:
+            self._main_gravity = np.array(grav, dtype='float')
+        # Don't try to get the length of a zero vector
+        if np.any(self._main_gravity):
+            self._main_gravity_direction = normalize_vector(self._main_gravity)
+        else:
+            # Don't allow zero gravity. Set it to what it was before instead, just very small
+            print('DEBUG: It was attempted to set gravity to 0, setting it to a very low value instead')
+            self._main_gravity = self._main_gravity_direction * 1e-9
+            # No need to set direction vector as it didn't change
+            # self._main_gravity_direction = np.zeros((2, ))
+        if self.physics_engine:
+            self.physics_engine.space.gravity = tuple(self._main_gravity)
+
+    @property
+    def main_gravity_dir(self):
+        """The direction (= normalized vector) of the main gravity"""
+        return self._main_gravity_direction
+    
+    def kill_player(self, reason):
+        print('Player died:', reason)
+        # Add 10 particles
+        player = self.player_sprite
+        x, y = player.position
+        # particle_size = 4
+        particle_size_min = 1
+        particle_size_variation = 2
+        # particle_size_max = 3
+        particle_mass = 1
+        for i in range(20):
+            particle_size = np.random.rand()*particle_size_variation+particle_size_min
+            particle = ParticleSprite(":resources:images/items/gold_1.png",
+                                      x, y, radius=particle_size, mass=particle_mass)
+            self.particle_list.append(particle)
+            self.physics_engine.add_sprite(particle, particle_mass, radius=particle_size, collision_type='particle')
+            # self.physics_engine.apply_impulse(particle, (1000, 1000))
+            self.physics_engine.apply_impulse(particle, tuple((np.random.rand(2)-.5)*1000))
+            
 
 
     def on_key_press(self, key, modifiers):
@@ -269,19 +345,15 @@ class GameWindow(arcade.Window):
         if key == arcade.key.LEFT:
             self.left_pressed = True
             update_gravity()
-            # self.main_gravity = np.array([GRAVITY, 0], dtype='float')
         elif key == arcade.key.RIGHT:
             self.right_pressed = True
             update_gravity()
-            # self.main_gravity = np.array([-GRAVITY, 0], dtype='float')
         elif key == arcade.key.UP:
             self.up_pressed = True
             update_gravity()
-            # self.main_gravity = np.array([0, -GRAVITY], dtype='float')
         elif key == arcade.key.DOWN:
             self.down_pressed = True
             update_gravity()
-            # self.main_gravity = np.array([0, GRAVITY], dtype='float')
 
     def on_key_release(self, key, modifiers):
         """Called when the user releases a key. """
@@ -310,11 +382,18 @@ class GameWindow(arcade.Window):
     def on_mouse_press(self, x, y, button, modifiers):
         """ Called whenever the mouse button is clicked. """
         if button == arcade.MOUSE_BUTTON_LEFT:
-            # Test: spawn box
-            sprite = DummyBoxSprite(x, y, 32, 10.0)
-            self.item_list.append(sprite)
-            body = sprite.pymunk_shape.body
-            self.physics_engine.add_sprite(sprite, body.mass)
+            # Test: spawn particle
+            radius = 2
+            mass = 1
+            particle = ParticleSprite(":resources:images/items/gold_1.png",
+                                      x, y, radius=radius, mass=mass)
+            self.item_list.append(particle)
+            self.physics_engine.add_sprite(particle, mass=mass,radius=radius)
+            # # Test: spawn box
+            # sprite = DummyBoxSprite(x, y, 32, 10.0)
+            # self.item_list.append(sprite)
+            # body = sprite.pymunk_shape.body
+            # self.physics_engine.add_sprite(sprite, body.mass)
         # match button:
         #     case arcade.MOUSE_BUTTON_LEFT:
         #         self.last_mouse_position_left = x, y
@@ -403,3 +482,4 @@ class GameWindow(arcade.Window):
         self.platform_list.draw()
         self.item_list.draw()
         self.player_list.draw()
+        self.particle_list.draw()
