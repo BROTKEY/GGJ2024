@@ -18,6 +18,9 @@ SCREEN_GRID_HEIGHT = 12
 SCREEN_WIDTH = SPRITE_SIZE * SCREEN_GRID_WIDTH
 SCREEN_HEIGHT = SPRITE_SIZE * SCREEN_GRID_HEIGHT
 
+# How fast the camera scrolls
+CAMERA_SPEED = 1
+
 # --- Physics forces. Higher number, faster accelerating.
 
 # Gravity

@@ -61,6 +61,8 @@ class GameWindow(arcade.Window):
 
         self.current_level = list(LEVEL)[1]
 
+        self.camera = arcade.Camera(width, height)
+
         self.leap_motion = leap_motion
 
     @property
@@ -442,12 +444,28 @@ class GameWindow(arcade.Window):
         self.update_gravity(hand_gesture_update=True)
         self.update_platforms()
 
+        self.scroll_to_player()
+
         # Move items in the physics engine
         self.physics_engine.step()
+
+    def scroll_to_player(self):
+        """
+        Scroll the window to the player.
+
+        if CAMERA_SPEED is 1, the camera will immediately move to the desired position.
+        Anything between 0 and 1 will have the camera move to the location with a smoother
+        pan.
+        """
+
+        position = pymunk.Vec2d(self.player_sprite.center_x - self.camera.viewport_width / 2,
+                        self.player_sprite.center_y - self.height / 2)
+        self.camera.move_to(position, CAMERA_SPEED)
 
     def on_draw(self):
         """ Draw everything """
         self.clear()
+        self.camera.use()
         self.wall_list.draw()
         self.platform_list.draw()
         self.item_list.draw()
