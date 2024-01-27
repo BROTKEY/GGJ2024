@@ -384,7 +384,8 @@ class GameWindow(arcade.Window):
         self.physics_engine.add_sprite_list(
             self.platform_list,
             friction=DYNAMIC_ITEM_FRICTION,
-            collision_type="item"
+            collision_type="item",
+            body_type=arcade.PymunkPhysicsEngine.KINEMATIC
         )
 
     def on_key_press(self, key, modifiers):
@@ -503,13 +504,6 @@ class GameWindow(arcade.Window):
         if self.d_pressed:
             for item in self.platform_list:
                 self.physics_engine.apply_force(item, (5000, -3000))
-
-        # If we are dragging an object, make sure it stays with the mouse. Otherwise
-        # gravity will drag it down.
-        if self.platform_left is not None:
-            self.physics_engine.set_velocity(self.platform_left, (0, 0))
-        if self.platform_right is not None:
-            self.physics_engine.set_velocity(self.platform_right, (0, 0))
 
         # Move items in the physics engine
         self.physics_engine.step()
