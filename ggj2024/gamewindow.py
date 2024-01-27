@@ -141,6 +141,7 @@ class GameWindow(arcade.Window):
             self.player_sprite.center_x = start_sprite.center_x
             self.player_sprite.center_y = start_sprite.center_y
             self.start_tile = start_sprite
+            self.start_center = self.start_tile.center_x, self.start_tile.center_y
         else:
             print("WARNING: No start was defined, player will spawn in the center of the level")
             self.start_tile = None
@@ -362,7 +363,8 @@ class GameWindow(arcade.Window):
             self.physics_engine.add_sprite(particle, particle_mass, radius=particle_size, collision_type='particle')
             self.physics_engine.apply_impulse(particle, tuple((np.random.rand(2)-.5)*2000))
 
-        self.respawn_player = True
+        # respawn
+        self.physics_engine.set_position(self.player_sprite, self.start_center)
 
     # TODO: combinations of direction buttons could be done better, this is just for testing
     def update_gravity(self, hand_gesture_update=False):
@@ -586,11 +588,6 @@ class GameWindow(arcade.Window):
 
         self.update_gravity(hand_gesture_update=True)
         self.update_platforms()
-
-        if self.respawn_player:
-            print("respawning player")
-            self.respawn_player = False
-            self.physics_engine.set_position(self.player_sprite, (200, 200))
 
         # Move items in the physics engine
         self.physics_engine.step()
