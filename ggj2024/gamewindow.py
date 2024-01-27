@@ -91,7 +91,6 @@ class GameWindow(arcade.Window):
         self.particle_list = arcade.SpriteList()
         self.background_list = arcade.SpriteList()
 
-
         # Map name
         map_name = "resources/tiled_maps/Level1.json"
         #map_name = "resources/tiled_maps/gravity_test.json"
@@ -369,12 +368,12 @@ class GameWindow(arcade.Window):
             if self.platform_left:
                 lx = self.hands.left_hand.x
                 ly = self.hands.left_hand.y
-                pos = (500 + lx, ly)
+                pos = (self.camera.position.x + self.width/2 + lx, self.camera.position.y + ly)
                 self.physics_engine.set_position(self.platform_left, pos)
             if self.platform_right:
                 rx = self.hands.right_hand.x
                 ry = self.hands.right_hand.y
-                pos = (500 + rx, ry)
+                pos = (self.camera.position.x + self.width/2 + rx, self.camera.position.y + ry)
                 self.physics_engine.set_position(self.platform_right, pos)
         else:
             # update platform position based on mouse input
