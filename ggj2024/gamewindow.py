@@ -68,8 +68,6 @@ class GameWindow(arcade.Window):
 
         self.current_level = list(LEVEL)[1]
 
-        self.camera = arcade.Camera(width, height)
-
         self.leap_motion = leap_motion
 
         # Loading the audio file
@@ -92,13 +90,17 @@ class GameWindow(arcade.Window):
 
         # Map name
         map_name = "resources/tiled_maps/Level1.json"
-        # map_name = "resources/tiled_maps/test_map_1.json"
+        #map_name = "resources/tiled_maps/gravity_test.json"
 
         # Load in TileMap
         tile_map = arcade.load_tilemap(map_name, SPRITE_SCALING_TILES)
 
         self.map_bounds_x = tile_map.width * tile_map.tile_width * tile_map.scaling
         self.map_bounds_y = tile_map.height * tile_map.tile_height * tile_map.scaling
+
+        self.width = int(min(self.width, self.map_bounds_x))
+        self.height = int(min(self.height, self.map_bounds_y))
+        self.camera = arcade.Camera(self.width, self.height)
 
         # Pull the sprite layers out of the tile map
         self.wall_list = tile_map.sprite_lists["Platforms"]
