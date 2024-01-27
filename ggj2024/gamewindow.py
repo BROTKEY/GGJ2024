@@ -8,7 +8,7 @@ from typing import Optional
 from ggj2024.HandReceiver import HandReceiver
 from ggj2024.config import *
 from ggj2024.utils import normalize_vector, rotate90_cw, rotate90_ccw
-from ggj2024.sprites import PlayerSprite, PhysicsSprite, ControllablePlatformSprite
+from ggj2024.sprites import PlayerSprite, PhysicsSprite, ControllablePlatformSprite, DummyBoxSprite
 
 
 class GameWindow(arcade.Window):
@@ -311,20 +311,10 @@ class GameWindow(arcade.Window):
         """ Called whenever the mouse button is clicked. """
         if button == arcade.MOUSE_BUTTON_LEFT:
             # Test: spawn box
-            # box = arcade.Sprite(':resources:/')
-            size = 32
-            mass = 1.0
-            # x = 10 + size * i
-            # y = 10
-            moment = pymunk.moment_for_box(mass, (size, size))
-            body = pymunk.Body(mass, moment)
-            body.position = pymunk.Vec2d(x, y)
-            shape = pymunk.Poly.create_box(body, (size, size))
-            shape.elasticity = 0.2
-            shape.friction = 0.9
-            sprite = ControllablePlatformSprite(shape, ":resources:images/tiles/boxCrate_double.png", width=size, height=size)
-            # self.platform_list.append(sprite)
+            sprite = DummyBoxSprite(x, y, 32, 10.0)
             self.item_list.append(sprite)
+            body = sprite.pymunk_shape.body
+            self.physics_engine.add_sprite(sprite, body.mass)
         # match button:
         #     case arcade.MOUSE_BUTTON_LEFT:
         #         self.last_mouse_position_left = x, y

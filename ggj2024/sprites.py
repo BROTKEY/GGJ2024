@@ -1,6 +1,7 @@
 import arcade
 
 from ggj2024.config import *
+import pymunk
 
 
 class PlayerSprite(arcade.Sprite):
@@ -104,3 +105,16 @@ class ControllablePlatformSprite(PhysicsSprite):
         super().__init__(pymunk_shape, filename)
         self.width = width
         self.height = height
+
+
+class DummyBoxSprite(PhysicsSprite):
+    def __init__(self, x, y, size, mass):
+        moment = pymunk.moment_for_box(mass, (size, size))
+        body = pymunk.Body(mass, moment)
+        body.position = pymunk.Vec2d(x, y)
+        shape = pymunk.Poly.create_box(body, (size, size))
+        shape.elasticity = 0.2
+        shape.friction = 0.9
+        super().__init__(shape, ":resources:images/tiles/boxCrate_double.png")
+        self.width = size
+        self.height = size
