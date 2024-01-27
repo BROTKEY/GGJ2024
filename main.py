@@ -6,6 +6,8 @@ import arcade
 import pymunk
 
 
+from ggj2024.HandReceiver import HandReceiver
+
 SCREEN_TITLE = "PyMunk Platformer"
 
 # How big are our image tiles?
@@ -254,6 +256,8 @@ class GameWindow(arcade.Window):
         self.up_pressed: bool = False
         self.down_pressed: bool = False
 
+        self.hands = HandReceiver()
+
         # Physics engine
         self.physics_engine: Optional[arcade.PymunkPhysicsEngine] = None
 
@@ -305,8 +309,8 @@ class GameWindow(arcade.Window):
         self.player_list.append(self.player_sprite)
 
         # Used for dragging shapes around with the mouse
-        self.platform_left = None
-        self.platform_right = None
+        self.platform_left = self.platform_list[0]
+        self.platform_right = self.platform_list[1]
         self.last_mouse_position_left = 0, 0
         self.last_mouse_position_right = 0, 0
 
@@ -416,20 +420,22 @@ class GameWindow(arcade.Window):
 
     def on_mouse_press(self, x, y, button, modifiers):
         """ Called whenever the mouse button is clicked. """
-        match button:
-            case arcade.MOUSE_BUTTON_LEFT:
-                self.last_mouse_position_left = x, y
-                self.platform_left = self.platform_list[0]
-            case arcade.MOUSE_BUTTON_RIGHT:
-                self.last_mouse_position_right = x, y
-                self.platform_right = self.platform_list[1]
+        # match button:
+        #     case arcade.MOUSE_BUTTON_LEFT:
+        #         self.last_mouse_position_left = x, y
+        #         self.platform_left = self.platform_list[0]
+        #     case arcade.MOUSE_BUTTON_RIGHT:
+        #         self.last_mouse_position_right = x, y
+        #         self.platform_right = self.platform_list[1]
+        pass
 
     def on_mouse_release(self, x, y, button, modifiers):
-        match button:
-            case arcade.MOUSE_BUTTON_LEFT:
-                self.platform_left = None
-            case arcade.MOUSE_BUTTON_RIGHT:
-                self.platform_right = None
+        # match button:
+        #     case arcade.MOUSE_BUTTON_LEFT:
+        #         self.platform_left = None
+        #     case arcade.MOUSE_BUTTON_RIGHT:
+        #         self.platform_right = None
+        pass
 
     def on_mouse_motion(self, x, y, dx, dy):
         if self.platform_left is not None:
@@ -439,6 +445,12 @@ class GameWindow(arcade.Window):
 
     def on_update(self, delta_time):
         """ Movement and game logic """
+        lx = float(self.hands.left_hand.x)
+        ly = float(self.hands.left_hand.y)
+        rx = float(self.hands.right_hand.x)
+        ry = float(self.hands.right_hand.y)
+        print(f"L = ({lx:.1f}, {ly:.1f}) R = ({rx:.1f}, {ry:.1f})")
+
         is_on_ground = self.physics_engine.is_on_ground(self.player_sprite)
         # Update player forces based on keys pressed
         if self.left_pressed and not self.right_pressed:
@@ -479,10 +491,14 @@ class GameWindow(arcade.Window):
 
         # update platform positions based on player input
         if self.platform_left:
-            self.physics_engine.set_position(self.platform_left, self.last_mouse_position_left)
+            pos = (500 + lx, ly)
+            self.physics_engine.set_position(self.platform_left, pos)
+            #self.physics_engine.set_position(self.platform_left, self.last_mouse_position_left)
 
         if self.platform_right:
-            self.physics_engine.set_position(self.platform_right, self.last_mouse_position_right)
+            pos = (500 + rx, ry)
+            self.physics_engine.set_position(self.platform_right, pos)
+            #self.physics_engine.set_position(self.platform_right, self.last_mouse_position_right)
 
         # Move items in the physics engine
         self.physics_engine.step()
