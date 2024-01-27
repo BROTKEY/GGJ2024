@@ -546,7 +546,7 @@ class GameWindow(arcade.Window):
         gravity_angle = np.arctan2(*self.main_gravity_dir)
         player_object.shape.body.angle = np.pi - gravity_angle
         player_velocity: pymunk.Vec2d = player_object.body.velocity.rotated(gravity_angle)
-        speed = player_velocity.x
+        speed = abs(player_velocity.x)
 
         is_on_ground = self.physics_engine.is_on_ground(self.player_sprite)
         # if is_on_ground:
