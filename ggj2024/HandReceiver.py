@@ -39,8 +39,8 @@ class HandReceiver:
             data = str(data, "utf-8")
             left_hand, right_hand = data.split("|")
 
-            self.left_hand = Hand(*left_hand.split(";"))
-            self.right_hand = Hand(*right_hand.split(";"))
+            self.left_hand = Hand(*[float(i) for i in left_hand.split(";")])
+            self.right_hand = Hand(*[float(i) for i in right_hand.split(";")])
 
     def stop(self):
         self.run = False
