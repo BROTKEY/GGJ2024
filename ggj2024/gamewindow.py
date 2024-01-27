@@ -44,6 +44,7 @@ class GameWindow(arcade.Window):
         self.particle_list: Optional[arcade.SpriteList] = None
         self.background_list: Optional[arcade.SpriteList] = None
         self.soft_list: Optional[arcade.SpriteList] = None
+        self.finish_list: Optional[arcade.SpriteList] = None
 
         # Track the current state of what key is pressed
         self.a_pressed: bool = False
@@ -70,8 +71,6 @@ class GameWindow(arcade.Window):
 
         self.current_level = list(LEVEL)[1]
 
-        self.camera = arcade.Camera(width, height)
-
         self.leap_motion = leap_motion
 
         # Loading the audio file
@@ -79,6 +78,9 @@ class GameWindow(arcade.Window):
         hit_sound_files = list(pathlib.Path('resources/sound/animal').glob('*.wav')) + list(pathlib.Path('resources/sound/kenney_impact-sounds/Audio/').glob('*.ogg'))
         max_hitsounds = min(10, len(hit_sound_files))
         self.audio_hits = [arcade.load_sound(file, False) for file in hit_sound_files[:max_hitsounds]]
+
+        self.start_tile: arcade.Sprite = None
+        self.finish_tiles: arcade.Sprite = None
 
         # Playing the audio
         arcade.play_sound(self.audio_theme, 1.0, -1, True)
@@ -91,19 +93,26 @@ class GameWindow(arcade.Window):
         self.platform_list = arcade.SpriteList()
         self.particle_list = arcade.SpriteList()
 
-
         # Map name
         map_name = "resources/tiled_maps/Level1.json"
-        # map_name = "resources/tiled_maps/test_map_1.json"
+        #map_name = "resources/tiled_maps/gravity_test.json"
 
         # Load in TileMap
         tile_map = arcade.load_tilemap(map_name, SPRITE_SCALING_TILES)
+
+        self.map_bounds_x = tile_map.width * tile_map.tile_width * tile_map.scaling
+        self.map_bounds_y = tile_map.height * tile_map.tile_height * tile_map.scaling
+
+        self.width = int(min(self.width, self.map_bounds_x))
+        self.height = int(min(self.height, self.map_bounds_y))
+        self.camera = arcade.Camera(self.width, self.height)
 
         # Pull the sprite layers out of the tile map
         self.wall_list = tile_map.sprite_lists["Platforms"]
         self.item_list = tile_map.sprite_lists["Dynamic Items"]
         self.background_list = tile_map.sprite_lists["Background"]
-        self.soft_list = tile_map.sprite_lists['Soft']
+        self.soft_list = tile_map.sprite_lists.get('Soft') or arcade.SpriteList()
+        self.finish_list = tile_map.sprite_lists.get('Finish') or arcade.SpriteList()
 
         # player-controlled platforms
         size = 64
@@ -123,17 +132,23 @@ class GameWindow(arcade.Window):
         # Create player sprite
         self.player_sprite = PlayerSprite(hit_box_algorithm="Detailed")
 
-        # Set player location
+        # Get player start from level
+        start_sprite_list = tile_map.sprite_lists.get('Start')
+        if start_sprite_list:
+            start_sprite: arcade.Sprite = start_sprite_list[0]
+            self.player_sprite.center_x = start_sprite.center_x
+            self.player_sprite.center_y = start_sprite.center_y
+        else:
+            print("WARNING: No start was defined, player will spawn in the center of the level")
+            self.player_sprite.center_x = (tile_map.width * SPRITE_SIZE) / 2
+            self.player_sprite.center_y = (tile_map.height * SPRITE_SIZE) / 2
 
-        grid_x = 1
-        grid_y = 1
-        # self.player_sprite.center_x = SPRITE_SIZE * grid_x + SPRITE_SIZE / 2
-        # self.player_sprite.center_y = SPRITE_SIZE * grid_y + SPRITE_SIZE / 2
-        # Start at center of map
-        self.player_sprite.center_x = (tile_map.width * SPRITE_SIZE) / 2
-        self.player_sprite.center_y = (tile_map.height * SPRITE_SIZE) / 2
         # Add to player sprite list
         self.player_list.append(self.player_sprite)
+
+        # Get finish
+        if not self.finish_list:
+            print('WARNING: No finish was defined, this level is unbeatable!')
 
         # Used for dragging shapes around with the mouse
         self.platform_left = self.platform_list[0]
@@ -194,8 +209,17 @@ class GameWindow(arcade.Window):
                                             friction=DYNAMIC_ITEM_FRICTION,
                                             collision_type="item")
         
-        self.physics_engine.add_sprite_list(self.background_list, 
-                                            collision_type="background", 
+        self.physics_engine.add_sprite_list(self.background_list,
+                                            collision_type="background",
+                                            body_type=arcade.PymunkPhysicsEngine.STATIC)
+    
+        self.physics_engine.add_sprite_list(self.soft_list,
+                                            collision_type='soft',
+                                            body_type=arcade.PymunkPhysicsEngine.STATIC,
+                                            elasticity=1.0)
+        
+        self.physics_engine.add_sprite_list(self.finish_list,
+                                            collision_type='finish',
                                             body_type=arcade.PymunkPhysicsEngine.STATIC)
 
         # add platforms moved by second player
@@ -227,8 +251,15 @@ class GameWindow(arcade.Window):
                 print(f'hit the ground too hard (impulse={impulse.length})')
                 self.kill_player('Object collision')
 
+        def handle_player_finish_collision(player: PlayerSprite, finish: arcade.Sprite, arbiter: pymunk.Arbiter, space, data):
+            # TODO level done
+            print('Congratulations, you reached the goal!')
+            # return False to cancel collisions
+            return False
+
         self.physics_engine.add_collision_handler('player', 'wall', post_handler=handle_player_wall_collision)
         self.physics_engine.add_collision_handler('player', 'item', post_handler=handle_player_item_collision)
+        self.physics_engine.add_collision_handler('player', 'finish', begin_handler=handle_player_finish_collision)
 
         def handle_particle_x_collision(particle: ParticleSprite, other: arcade.Sprite, arbiter: pymunk.Arbiter, space, data):
             self.physics_engine.remove_sprite(particle)
@@ -277,9 +308,15 @@ class GameWindow(arcade.Window):
         self.physics_engine.add_collision_handler('particle', 'soft', post_handler=handle_particle_x_collision)
         self.physics_engine.add_collision_handler('particle', 'player', pre_handler=lambda *args: False)
         self.physics_engine.add_collision_handler('particle', 'background', post_handler=handle_particle_x_collision)
+        
+        self.physics_engine.add_collision_handler('particle', 'finish', pre_handler=lambda *args: False)
+        self.physics_engine.add_collision_handler('item', 'finish', pre_handler=lambda *args: False)
+        self.physics_engine.add_collision_handler('wall', 'finish', pre_handler=lambda *args: False)
+        self.physics_engine.add_collision_handler('soft', 'finish', pre_handler=lambda *args: False)
 
         self.physics_engine.add_collision_handler('background', 'player', pre_handler=lambda *args: False)
         self.physics_engine.add_collision_handler('background', 'item', pre_handler=lambda *args: False)
+        self.physics_engine.add_collision_handler('background', 'finish', pre_handler=lambda *args: False)
 
     @property
     def main_gravity(self):
@@ -371,12 +408,12 @@ class GameWindow(arcade.Window):
             if self.platform_left:
                 lx = self.hands.left_hand.x
                 ly = self.hands.left_hand.y
-                pos = (500 + lx, ly)
+                pos = (self.camera.position.x + self.width/2 + lx, self.camera.position.y + ly)
                 self.physics_engine.set_position(self.platform_left, pos)
             if self.platform_right:
                 rx = self.hands.right_hand.x
                 ry = self.hands.right_hand.y
-                pos = (500 + rx, ry)
+                pos = (self.camera.position.x + self.width/2 + rx, self.camera.position.y + ry)
                 self.physics_engine.set_position(self.platform_right, pos)
         else:
             # update platform position based on mouse input
@@ -552,9 +589,14 @@ class GameWindow(arcade.Window):
         pan.
         """
 
-        position = pymunk.Vec2d(self.player_sprite.center_x - self.camera.viewport_width / 2,
-                        self.player_sprite.center_y - self.height / 2)
-        self.camera.move_to(position, CAMERA_SPEED)
+        map_bounds = np.array([self.map_bounds_x, self.map_bounds_y])
+        camera_size = np.array([self.camera.viewport_width, self.camera.viewport_height])
+
+        target_position = np.array([self.player_sprite.center_x - self.width / 2,
+                        self.player_sprite.center_y - self.height / 2])
+        target_position = np.max([target_position, np.zeros(2)], axis=0)
+        target_position = np.min([target_position, map_bounds-camera_size], axis=0)
+        self.camera.move_to(pymunk.Vec2d(*tuple(target_position)), CAMERA_SPEED)
 
     def on_draw(self):
         """ Draw everything """
@@ -565,4 +607,5 @@ class GameWindow(arcade.Window):
         self.platform_list.draw()
         self.item_list.draw()
         self.player_list.draw()
+        self.soft_list.draw()
         self.particle_list.draw()
