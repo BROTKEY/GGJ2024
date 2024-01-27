@@ -445,10 +445,10 @@ class GameWindow(arcade.Window):
 
     def on_update(self, delta_time):
         """ Movement and game logic """
-        lx = float(self.hands.left_hand.x)
-        ly = float(self.hands.left_hand.y)
-        rx = float(self.hands.right_hand.x)
-        ry = float(self.hands.right_hand.y)
+        lx = self.hands.left_hand.x
+        ly = self.hands.left_hand.y
+        rx = self.hands.right_hand.x
+        ry = self.hands.right_hand.y
         print(f"L = ({lx:.1f}, {ly:.1f}) R = ({rx:.1f}, {ry:.1f})")
 
         is_on_ground = self.physics_engine.is_on_ground(self.player_sprite)
