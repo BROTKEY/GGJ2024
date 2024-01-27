@@ -45,6 +45,9 @@ class HandReceiver:
     def stop(self):
         self.run = False
 
+    def __del__(self):
+        self.stop()
+
 
 if __name__ == "__main__":
     hands = HandReceiver()
