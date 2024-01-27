@@ -13,6 +13,7 @@ packages = [
 [tool.poetry.dependencies]
 python = ">=3.10"
 arcade = "^2.6.17"
+numpy = ">=1.26.3"
 
 [tool.poetry.group.dev.dependencies]
 autopep8 = "^2.0.4"
