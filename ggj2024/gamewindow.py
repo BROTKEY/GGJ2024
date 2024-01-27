@@ -224,11 +224,13 @@ class GameWindow(arcade.Window):
         self.physics_engine.add_collision_handler('player', 'item', post_handler=handle_player_item_collision)
 
     # TODO: combinations of direction buttons could be done better, this is just for testing
-    def update_gravity(self, left_hand=None, right_hand=None):
+    def update_gravity(self, hand_gesture_update=False):
         if not self.current_level == LEVEL.GRAVITY:
             return
 
-        if left_hand and right_hand:
+        if hand_gesture_update:
+            left_hand = (self.hands.left_hand.x, self.hands.left_hand.y)
+            right_hand = (self.hands.right_hand.x, self.hands.right_hand.y)
             # update gravity based on hand positions of second player
             v = np.array(right_hand) - np.array(left_hand)
             new_grav = (v[1], -v[0])
@@ -252,16 +254,20 @@ class GameWindow(arcade.Window):
 
         self.main_gravity = new_grav
 
-    def update_platforms(self, lx, ly, rx, ry):
+    def update_platforms(self):
         if not self.current_level == LEVEL.PLATFORMS:
             return
 
         if self.leap_motion:
             # update platform positions based on second player input
             if self.platform_left:
+                lx = self.hands.left_hand.x
+                ly = self.hands.left_hand.y
                 pos = (500 + lx, ly)
                 self.physics_engine.set_position(self.platform_left, pos)
             if self.platform_right:
+                rx = self.hands.right_hand.x
+                ry = self.hands.right_hand.y
                 pos = (500 + rx, ry)
                 self.physics_engine.set_position(self.platform_right, pos)
         else:
@@ -382,11 +388,6 @@ class GameWindow(arcade.Window):
 
     def on_update(self, delta_time):
         """ Movement and game logic """
-        lx = self.hands.left_hand.x
-        ly = self.hands.left_hand.y
-        rx = self.hands.right_hand.x
-        ry = self.hands.right_hand.y
-        #print(f"L = ({lx:.1f}, {ly:.1f}) R = ({rx:.1f}, {ry:.1f})")
 
         # Rotate player to gravity
         self.physics_engine.get_physics_object(self.player_sprite).shape.body.angle = np.pi - np.arctan2(*self.main_gravity_dir)
@@ -427,8 +428,8 @@ class GameWindow(arcade.Window):
             # Player's feet are not moving. Therefore up the friction so we stop.
             self.physics_engine.set_friction(self.player_sprite, 1.0)
 
-        self.update_gravity((lx, ly), (rx, ry))
-        self.update_platforms(lx, ly, rx, ry)
+        self.update_gravity(hand_gesture_update=True)
+        self.update_platforms()
 
         # Move items in the physics engine
         self.physics_engine.step()
