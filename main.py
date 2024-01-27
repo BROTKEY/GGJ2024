@@ -306,8 +306,8 @@ class GameWindow(arcade.Window):
         size = 64
         mass = 1.0
         for i in range(2):
-            x = 500 + size * i
-            y = 500
+            x = 10 + size * i
+            y = 10
             moment = pymunk.moment_for_box(mass, (size, 2*size))
             body = pymunk.Body(mass, moment)
             body.position = pymunk.Vec2d(x, y)
