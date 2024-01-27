@@ -254,12 +254,12 @@ class GameWindow(arcade.Window):
         def handle_player_finish_collision(player: PlayerSprite, finish: arcade.Sprite, arbiter: pymunk.Arbiter, space, data):
             # TODO level done
             print('Congratulations, you reached the goal!')
+            # return False to cancel collisions
+            return False
 
         self.physics_engine.add_collision_handler('player', 'wall', post_handler=handle_player_wall_collision)
         self.physics_engine.add_collision_handler('player', 'item', post_handler=handle_player_item_collision)
-        self.physics_engine.add_collision_handler('player', 'finish', 
-                                                  pre_handler=lambda *args: False,
-                                                  post_handler=handle_player_finish_collision)
+        self.physics_engine.add_collision_handler('player', 'finish', begin_handler=handle_player_finish_collision)
 
         def handle_particle_x_collision(particle: ParticleSprite, other: arcade.Sprite, arbiter: pymunk.Arbiter, space, data):
             self.physics_engine.remove_sprite(particle)
