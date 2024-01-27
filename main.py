@@ -12,6 +12,8 @@ def main():
     window = GameWindow(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
     window.setup()
     arcade.run()
+    # HACK: do this automatically when window closes
+    window.hands.stop()
 
 
 if __name__ == "__main__":
