@@ -1,3 +1,5 @@
+import pathlib
+import random
 import arcade
 import pymunk
 
@@ -62,6 +64,14 @@ class GameWindow(arcade.Window):
         self.current_level = list(LEVEL)[1]
 
         self.leap_motion = leap_motion
+
+        # Loading the audio file
+        self.audio_theme = arcade.load_sound('resources/sound/theme.mp3', False)
+        hit_sound_files = pathlib.Path('resources/sound/kenney_impact-sounds/Audio/').glob('*.ogg')
+        self.audio_hits = [arcade.load_sound(file, False) for file in hit_sound_files]
+
+        # Playing the audio
+#        arcade.play_sound(self.audio_theme, 1.0, -1, False)
 
     @property
     def main_gravity(self):
@@ -211,6 +221,8 @@ class GameWindow(arcade.Window):
             impulse: pymunk.Vec2d = arbiter.total_impulse
             if impulse.length > 500:
                 print('wall collision, impulse =', impulse.length)
+                hit_sound = random.choice(self.audio_hits)
+                arcade.play_sound(hit_sound, 1.0, -1, False)
             if impulse.length > PLAYER_DEATH_IMPULSE:
                 print(f'died from item (impulse={impulse.length})')
 
@@ -218,6 +230,8 @@ class GameWindow(arcade.Window):
             impulse: pymunk.Vec2d = arbiter.total_impulse
             if impulse.length > 500:
                 print('object collision, impulse =', impulse.length)
+                hit_sound = random.choice(self.audio_hits)
+                arcade.play_sound(hit_sound, 1.0, -1, False)
             if impulse.length > PLAYER_DEATH_IMPULSE:
                 print(f'hit the ground too hard (impulse={impulse.length})')
 
