@@ -233,8 +233,6 @@ class GameWindow(arcade.Window):
         self.down_pressed: bool = False
 
         self.main_gravity = np.array([0, -GRAVITY], dtype='float')
-        # self.main_gravity = np.array([-GRAVITY, -GRAVITY], dtype='float')
-
 
         # Set background color
         arcade.set_background_color(arcade.color.AMAZON)
@@ -357,25 +355,25 @@ class GameWindow(arcade.Window):
                                             body_type=arcade.PymunkPhysicsEngine.KINEMATIC)
         
         # Collisions
-        def handle_player_wall_collision(player_sprite, wall_sprite, arbiter: pymunk.Arbiter, space, data):
+        def handle_player_wall_collision(player_sprite: PlayerSprite, wall_sprite: arcade.Sprite, arbiter: pymunk.Arbiter, space, data):
             surfvel: pymunk.Vec2d = arbiter.surface_velocity
             impulse: pymunk.Vec2d = arbiter.total_impulse
-            # print()
-            # print('arbiter', type(arbiter), arbiter)
-            # collpoints = arbiter.contact_point_set
-            # print('collpoints', type(collpoints), collpoints)
-            # print('surface_velocity', surfvel, 'length', surfvel.length)
-            # print('impulse', arbiter.total_impulse, 'length', impulse.length)
-            # print('ke', arbiter.total_ke)
-            # print('space', type(data), space)
-            # print('data', type(data), data)
             if impulse.length > 500:
-                print('impulse =', impulse.length)
+                print('wall collision, impulse =', impulse.length)
             if impulse.length > PLAYER_DEATH_IMPULSE:
-                print(f'died (impulse={impulse.length})')
+                print(f'died from wall (impulse={impulse.length})')
+        def handle_player_item_collision(player_sprite: PlayerSprite, item_sprite: arcade.Sprite, arbiter: pymunk.Arbiter, space, data):
+            surfvel: pymunk.Vec2d = arbiter.surface_velocity
+            impulse: pymunk.Vec2d = arbiter.total_impulse
+            item_sprite.
+            if impulse.length > 500:
+                print('item collision, impulse =', impulse.length)
+            if impulse.length > PLAYER_DEATH_IMPULSE:
+                print(f'died from item (impulse={impulse.length})')
 
         self.physics_engine.add_collision_handler('player', 'wall', post_handler=handle_player_wall_collision)
-            
+        self.physics_engine.add_collision_handler('player', 'item', post_handler=handle_player_item_collision)
+        # TODO: collision player-kinematics
 
 
 
@@ -427,19 +425,15 @@ class GameWindow(arcade.Window):
         if key == arcade.key.LEFT:
             self.left_pressed = True
             update_gravity()
-            # self.main_gravity = np.array([GRAVITY, 0], dtype='float')
         elif key == arcade.key.RIGHT:
             self.right_pressed = True
             update_gravity()
-            # self.main_gravity = np.array([-GRAVITY, 0], dtype='float')
         elif key == arcade.key.UP:
             self.up_pressed = True
             update_gravity()
-            # self.main_gravity = np.array([0, -GRAVITY], dtype='float')
         elif key == arcade.key.DOWN:
             self.down_pressed = True
             update_gravity()
-            # self.main_gravity = np.array([0, GRAVITY], dtype='float')
 
     def on_key_release(self, key, modifiers):
         """Called when the user releases a key. """
@@ -504,8 +498,6 @@ class GameWindow(arcade.Window):
             # TODO: is this really a good idea?
             self.physics_engine.set_friction(self.player_sprite, 0)
         elif self.w_pressed and not self.s_pressed:
-            # Create a force to the top, in the opposite direction of the gravity. 
-            # force_dir = rotate90_ccw(self.main_gravity_dir)
             pass
         elif self.s_pressed and not self.w_pressed:
             pass
