@@ -18,5 +18,5 @@ def main():
         arcade.run()
         window.hands.stop()
     except KeyboardInterrupt:
+        print('KeyboardInterrupt')
         window.hands.stop()
-        raise
