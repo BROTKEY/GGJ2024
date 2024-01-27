@@ -51,6 +51,13 @@ class HandReceiver:
 
 if __name__ == "__main__":
     hands = HandReceiver()
+
+    i = 0
     while True:
         print(f"Left Hand:\t {hands.left_hand}")
         print(f"Right Hand:\t {hands.right_hand}")
+
+        i += 1
+
+        if i > 1000:
+            break
