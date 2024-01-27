@@ -25,20 +25,30 @@ class LeapProvider:
 
     def client_handler(self, client, addr):
         while True:
-            data = "{};{};{}-{};{};{}".format(*self.leap.left_hand_position, *self.leap.right_hand_position)
-            client.send(bytes(data, 'utf-8'))
+            data = "{};{};{}|{};{};{}".format(*self.leap.left_hand_position, *self.leap.right_hand_position)
 
-            data = client.recv(1024)
-            if not data:
-                print("Client {} disconnected!".format(addr))
+            try:
+                client.send(bytes(data, 'utf-8'))
+                data = client.recv(1024)
+            except ConnectionResetError:
                 break
+
+            if not data:
+                break
+
+        print("Client {} disconnected!".format(addr))
+        client.close()
 
     def start(self):
         self.running = True
-        self.connection_handler.run()
+        self.connection_handler.start()
 
     def stop(self):
         self.running = False
+        self.sock.close()
+
+    def __del__(self):
+        self.stop()
 
 
 class LeapListener(leap.Listener):
