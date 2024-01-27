@@ -24,7 +24,7 @@ CAMERA_SPEED = 0.5
 # --- Physics forces. Higher number, faster accelerating.
 
 # Gravity
-GRAVITY = 2500
+GRAVITY = 2000
 
 # Damping - Amount of speed lost per second
 DEFAULT_DAMPING = 1.0
@@ -39,8 +39,8 @@ DYNAMIC_ITEM_FRICTION = 0.6
 PLAYER_MASS = 2.0
 
 # Keep player from going too fast
-PLAYER_MAX_HORIZONTAL_SPEED = 10000
-PLAYER_MAX_VERTICAL_SPEED = 10000
+PLAYER_MAX_HORIZONTAL_SPEED = 5000
+PLAYER_MAX_VERTICAL_SPEED = 5000
 
 # Force applied while on the ground
 PLAYER_MOVE_FORCE_ON_GROUND = 8000
@@ -50,7 +50,7 @@ PLAYER_MOVE_FORCE_IN_AIR = 5000
 # Strength of a jump
 PLAYER_JUMP_IMPULSE = 1500
 
-PLAYER_DEATH_IMPULSE = 2000
+PLAYER_DEATH_IMPULSE = 3000
 
 # Close enough to not-moving to have the animation go to idle.
 DEAD_ZONE = 0.1
