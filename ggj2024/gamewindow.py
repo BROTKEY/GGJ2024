@@ -233,6 +233,11 @@ class GameWindow(arcade.Window):
             v = np.array(right_hand) - np.array(left_hand)
             new_grav = (v[1], -v[0])
             new_grav = normalize_vector(new_grav) * GRAVITY
+
+            FIST_THRESHOLD = 2.5
+            fists_shown = self.hands.left_hand.grab_angle > FIST_THRESHOLD and self.hands.right_hand.grab_angle > FIST_THRESHOLD
+            if fists_shown:
+                new_grav = -new_grav
         else:
             # This one will set gravity to 0 if two opposite keys are pressed, is this good...?
             new_grav = np.array([0, 0], dtype='float')
