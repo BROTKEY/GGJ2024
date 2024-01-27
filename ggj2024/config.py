@@ -19,7 +19,7 @@ SCREEN_WIDTH = SPRITE_SIZE * SCREEN_GRID_WIDTH
 SCREEN_HEIGHT = SPRITE_SIZE * SCREEN_GRID_HEIGHT
 
 # How fast the camera scrolls
-CAMERA_SPEED = 0.5
+CAMERA_SPEED = 1e-4
 
 # --- Physics forces. Higher number, faster accelerating.
 
@@ -54,7 +54,7 @@ PLAYER_MOVE_FORCE_IN_AIR = 5000
 # Strength of a jump
 PLAYER_JUMP_IMPULSE = 1500
 
-PLAYER_DEATH_IMPULSE = 3000
+PLAYER_DEATH_IMPULSE = 5000
 
 # Close enough to not-moving to have the animation go to idle.
 DEAD_ZONE = 0.1

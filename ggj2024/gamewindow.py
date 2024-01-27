@@ -69,8 +69,8 @@ class GameWindow(arcade.Window):
         # Set background color
         arcade.set_background_color(arcade.color.AMAZON)
 
-        self.current_level = list(LEVEL)[1]
-
+        self.current_level = list(LEVEL)[0]
+        self.respawn_player = False
         self.leap_motion = leap_motion
 
         # Loading the audio file
@@ -95,7 +95,7 @@ class GameWindow(arcade.Window):
         self.particle_list = arcade.SpriteList()
 
         # Map name
-        map_name = "resources/tiled_maps/Level1.json"
+        map_name = "resources/tiled_maps/Level2.json"
         #map_name = "resources/tiled_maps/gravity_test.json"
 
         # Load in TileMap
@@ -107,6 +107,7 @@ class GameWindow(arcade.Window):
         self.width = int(min(self.width, self.map_bounds_x))
         self.height = int(min(self.height, self.map_bounds_y))
         self.camera = arcade.Camera(self.width, self.height)
+        self.camera_speed_factor = CAMERA_SPEED
 
         # Pull the sprite layers out of the tile map
         self.wall_list = tile_map.sprite_lists["Platforms"]
@@ -350,8 +351,7 @@ class GameWindow(arcade.Window):
     def kill_player(self, reason):
         print('Player died:', reason)
         # Add 25 particles
-        player = self.player_sprite
-        x, y = player.position
+        x, y = self.player_sprite.position
         particle_size_min = 1
         particle_size_variation = 2
         particle_mass = 0.5
@@ -361,6 +361,8 @@ class GameWindow(arcade.Window):
             self.particle_list.append(particle)
             self.physics_engine.add_sprite(particle, particle_mass, radius=particle_size, collision_type='particle')
             self.physics_engine.apply_impulse(particle, tuple((np.random.rand(2)-.5)*2000))
+
+        self.respawn_player = True
 
     # TODO: combinations of direction buttons could be done better, this is just for testing
     def update_gravity(self, hand_gesture_update=False):
@@ -593,10 +595,15 @@ class GameWindow(arcade.Window):
         self.update_gravity(hand_gesture_update=True)
         self.update_platforms()
 
-        self.scroll_to_player()
+        if self.respawn_player:
+            print("respawning player")
+            self.respawn_player = False
+            self.physics_engine.set_position(self.player_sprite, (200, 200))
 
         # Move items in the physics engine
         self.physics_engine.step()
+
+        self.scroll_to_player()
 
     def scroll_to_player(self):
         """
@@ -614,7 +621,10 @@ class GameWindow(arcade.Window):
                         self.player_sprite.center_y - self.height / 2])
         target_position = np.max([target_position, np.zeros(2)], axis=0)
         target_position = np.min([target_position, map_bounds-camera_size], axis=0)
-        self.camera.move_to(pymunk.Vec2d(*tuple(target_position)), CAMERA_SPEED)
+
+        camera_speed = np.linalg.norm(target_position - np.array(self.camera.position)) * self.camera_speed_factor
+
+        self.camera.move_to(pymunk.Vec2d(*tuple(target_position)), camera_speed)
 
     def on_draw(self):
         """ Draw everything """
