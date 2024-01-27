@@ -4,11 +4,17 @@ import pymunk
 import numpy as np
 
 from typing import Optional
+from enum import Enum
 
 from ggj2024.HandReceiver import HandReceiver
 from ggj2024.config import *
 from ggj2024.utils import normalize_vector, rotate90_cw, rotate90_ccw
 from ggj2024.sprites import PlayerSprite, PhysicsSprite, ControllablePlatformSprite
+
+
+class LEVEL(Enum):
+    PLATFORMS = 1
+    GRAVITY = 2
 
 
 class GameWindow(arcade.Window):
@@ -53,6 +59,7 @@ class GameWindow(arcade.Window):
         # Set background color
         arcade.set_background_color(arcade.color.AMAZON)
 
+        self.current_level = LEVEL.PLATFORMS
 
     @property
     def main_gravity(self):
@@ -213,7 +220,6 @@ class GameWindow(arcade.Window):
 
         self.physics_engine.add_collision_handler('player', 'wall', post_handler=handle_player_wall_collision)
         self.physics_engine.add_collision_handler('player', 'item', post_handler=handle_player_item_collision)
-
 
     def on_key_press(self, key, modifiers):
         """Called whenever a key is pressed. """
