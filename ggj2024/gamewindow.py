@@ -282,8 +282,9 @@ class GameWindow(arcade.Window):
         particle_mass = 1
         for i in range(20):
             particle_size = np.random.rand()*particle_size_variation+particle_size_min
-            particle = ParticleSprite(":resources:images/items/gold_1.png",
-                                      x, y, radius=particle_size, mass=particle_mass)
+            # particle = ParticleSprite(":resources:images/items/gold_1.png",
+            #                           x, y, radius=particle_size, mass=particle_mass)
+            particle = ParticleSprite(x, y, particle_size, particle_mass)
             self.particle_list.append(particle)
             self.physics_engine.add_sprite(particle, particle_mass, radius=particle_size, collision_type='particle')
             # self.physics_engine.apply_impulse(particle, (1000, 1000))

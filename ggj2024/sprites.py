@@ -2,6 +2,8 @@ import arcade
 
 from ggj2024.config import *
 import pymunk
+import numpy as np
+
 
 
 class PlayerSprite(arcade.Sprite):
@@ -121,14 +123,21 @@ class DummyBoxSprite(PhysicsSprite):
 
 
 class ParticleSprite(arcade.Sprite):
-    TEXTURE = None
+    PARTICLE_COUNT = 0
+    COLOR_VARIATION = 50
 
-    def __init__(self, filename, x, y, radius, mass=1):
-        moment = pymunk.moment_for_circle(mass, radius/2, radius)
-        body = pymunk.Body(mass, moment)
-        body.position = pymunk.Vec2d(x, y)
-        shape = pymunk.Circle(body, radius, (0, 0))
-        super().__init__(shape, filename)
+    def __init__(self, x, y, radius, mass=1):
+        self.texture_name = f'particle_{ParticleSprite.PARTICLE_COUNT}'
+        ParticleSprite.PARTICLE_COUNT += 1
+        color_var = int(np.random.random() * ParticleSprite.COLOR_VARIATION)
+        if np.random.rand() < 0.5:
+            color = (255 - color_var, 0, 0)
+        else:
+            color = (255, color_var, color_var)
+        print(color)
+        diameter = int(2*radius)
+        texture = arcade.make_circle_texture(diameter, color, self.texture_name)
+        super().__init__(center_x=x, center_y=y, texture=texture)
         self.radius = radius
         self.width = 2*radius
         self.height = 2*radius
