@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<tileset version="1.8" tiledversion="1.8.0" name="General" tilewidth="256" tileheight="256" tilecount="19" columns="0">
+<tileset version="1.8" tiledversion="1.8.0" name="General" tilewidth="256" tileheight="256" tilecount="11" columns="0">
  <grid orientation="orthogonal" width="1" height="1"/>
  <tile id="20">
   <image width="128" height="128" source="TILES/fence.png"/>
@@ -38,29 +38,10 @@
  </tile>
  <tile id="37">
   <image width="256" height="256" source="TILES/cloud.png"/>
- </tile>
- <tile id="44">
-  <image width="128" height="128" source="TILES/tree_1.png"/>
- </tile>
- <tile id="45">
-  <image width="128" height="128" source="TILES/tree_2.png"/>
- </tile>
- <tile id="46">
-  <image width="128" height="128" source="TILES/tree_3.png"/>
- </tile>
- <tile id="47">
-  <image width="128" height="128" source="TILES/tree_4.png"/>
- </tile>
- <tile id="48">
-  <image width="128" height="128" source="TILES/tree_5.png"/>
- </tile>
- <tile id="49">
-  <image width="128" height="128" source="TILES/tree_6.png"/>
- </tile>
- <tile id="50">
-  <image width="128" height="128" source="TILES/tree_7.png"/>
- </tile>
- <tile id="51">
-  <image width="128" height="128" source="TILES/tree_8.png"/>
+  <objectgroup draworder="index" id="2">
+   <object id="1" x="54.6911" y="126.31">
+    <polygon points="0,0 0.651084,-17.5793 8.46409,-34.5075 35.8096,-42.3205 54.6911,-46.227 91.1518,-48.8313 119.799,-47.5291 144.541,-39.7161 159.516,-24.7412 168.631,-5.20867 170.584,11.0684 162.12,29.9499 147.145,41.0183 132.17,48.1802 114.591,51.4356 91.1518,52.7378 64.4573,53.3889 46.8781,50.7846 24.7412,51.4356 6.51084,44.9248 -4.55759,31.9031 -5.85976,17.5793"/>
+   </object>
+  </objectgroup>
  </tile>
 </tileset>
