@@ -13,9 +13,6 @@
  <tile id="27">
   <image width="128" height="128" source="TILES/Slope.png"/>
  </tile>
- <tile id="28">
-  <image width="256" height="512" source="TILES/tree.png"/>
- </tile>
  <tile id="30">
   <image width="128" height="128" source="TILES/White.png"/>
  </tile>
@@ -33,5 +30,8 @@
  </tile>
  <tile id="35">
   <image width="128" height="128" source="TILES/grass.png"/>
+ </tile>
+ <tile id="36">
+  <image width="256" height="512" source="TILES/tree.png"/>
  </tile>
 </tileset>

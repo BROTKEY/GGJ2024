@@ -42,6 +42,8 @@ class GameWindow(arcade.Window):
         self.moving_sprites_list: Optional[arcade.SpriteList] = None
         self.platform_list: Optional[arcade.SpriteList] = None
         self.particle_list: Optional[arcade.SpriteList] = None
+        self.background_list: Optional[arcade.SpriteList] = None
+
 
         # Track the current state of what key is pressed
         self.a_pressed: bool = False
@@ -89,6 +91,8 @@ class GameWindow(arcade.Window):
         self.bullet_list = arcade.SpriteList()
         self.platform_list = arcade.SpriteList()
         self.particle_list = arcade.SpriteList()
+        self.background_list = arcade.SpriteList()
+
 
         # Map name
         map_name = "resources/tiled_maps/Level1.json"
@@ -100,6 +104,7 @@ class GameWindow(arcade.Window):
         # Pull the sprite layers out of the tile map
         self.wall_list = tile_map.sprite_lists["Platforms"]
         self.item_list = tile_map.sprite_lists["Dynamic Items"]
+        self.background_list = tile_map.sprite_lists["Background"]
 
         # player-controlled platforms
         size = 64
@@ -189,6 +194,8 @@ class GameWindow(arcade.Window):
         self.physics_engine.add_sprite_list(self.item_list,
                                             friction=DYNAMIC_ITEM_FRICTION,
                                             collision_type="item")
+        
+        self.physics_engine.add_sprite_list(self.background_list, collision_type="wall", body_type=arcade.PymunkPhysicsEngine.STATIC)
 
         # add platforms moved by second player
         self.physics_engine.add_sprite_list(
@@ -551,3 +558,4 @@ class GameWindow(arcade.Window):
         self.item_list.draw()
         self.player_list.draw()
         self.particle_list.draw()
+        self.background_list.draw()
