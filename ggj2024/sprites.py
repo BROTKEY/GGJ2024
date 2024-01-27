@@ -134,7 +134,6 @@ class ParticleSprite(arcade.Sprite):
             color = (255 - color_var, 0, 0)
         else:
             color = (255, color_var, color_var)
-        print(color)
         diameter = int(2*radius)
         texture = arcade.make_circle_texture(diameter, color, self.texture_name)
         super().__init__(center_x=x, center_y=y, texture=texture)
