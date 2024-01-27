@@ -71,7 +71,7 @@ class GameWindow(arcade.Window):
         self.audio_hits = [arcade.load_sound(file, False) for file in hit_sound_files]
 
         # Playing the audio
-#        arcade.play_sound(self.audio_theme, 1.0, -1, False)
+        arcade.play_sound(self.audio_theme, 1.0, -1, True)
 
     @property
     def main_gravity(self):
