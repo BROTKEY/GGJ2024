@@ -99,7 +99,7 @@ class GameWindow(arcade.Window):
         self.platform_list = arcade.SpriteList()
 
         # Map name
-        map_name = "resources/tiled_maps/gravity_test.json"
+        map_name = "resources/tiled_maps/Level1.json"
         # map_name = "resources/tiled_maps/test_map_1.json"
 
         # Load in TileMap
