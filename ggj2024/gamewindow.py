@@ -197,24 +197,26 @@ class GameWindow(arcade.Window):
         )
 
         # Collisions
-        def handle_player_wall_collision(player_sprite, wall_sprite, arbiter: pymunk.Arbiter, space, data):
+        def handle_player_wall_collision(player_sprite: PlayerSprite, wall_sprite: arcade.Sprite, arbiter: pymunk.Arbiter, space, data):
             surfvel: pymunk.Vec2d = arbiter.surface_velocity
             impulse: pymunk.Vec2d = arbiter.total_impulse
-            # print()
-            # print('arbiter', type(arbiter), arbiter)
-            # collpoints = arbiter.contact_point_set
-            # print('collpoints', type(collpoints), collpoints)
-            # print('surface_velocity', surfvel, 'length', surfvel.length)
-            # print('impulse', arbiter.total_impulse, 'length', impulse.length)
-            # print('ke', arbiter.total_ke)
-            # print('space', type(data), space)
-            # print('data', type(data), data)
             if impulse.length > 500:
-                print('impulse =', impulse.length)
+                print('wall collision, impulse =', impulse.length)
             if impulse.length > PLAYER_DEATH_IMPULSE:
-                print(f'died (impulse={impulse.length})')
+                print(f'died from wall (impulse={impulse.length})')
+        def handle_player_item_collision(player_sprite: PlayerSprite, item_sprite: arcade.Sprite, arbiter: pymunk.Arbiter, space, data):
+            surfvel: pymunk.Vec2d = arbiter.surface_velocity
+            impulse: pymunk.Vec2d = arbiter.total_impulse
+            item_sprite.
+            if impulse.length > 500:
+                print('item collision, impulse =', impulse.length)
+            if impulse.length > PLAYER_DEATH_IMPULSE:
+                print(f'died from item (impulse={impulse.length})')
 
         self.physics_engine.add_collision_handler('player', 'wall', post_handler=handle_player_wall_collision)
+        self.physics_engine.add_collision_handler('player', 'item', post_handler=handle_player_item_collision)
+        # TODO: collision player-kinematics
+        
 
     def on_key_press(self, key, modifiers):
         """Called whenever a key is pressed. """
