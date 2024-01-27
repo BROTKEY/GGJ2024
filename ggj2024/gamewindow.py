@@ -20,7 +20,7 @@ class LEVEL(Enum):
 class GameWindow(arcade.Window):
     """ Main Window """
 
-    def __init__(self, width, height, title):
+    def __init__(self, width, height, title, leap_motion=True):
         """ Create the variables """
 
         # Init the parent class
@@ -61,7 +61,7 @@ class GameWindow(arcade.Window):
 
         self.current_level = list(LEVEL)[1]
 
-        self.leap_motion = False
+        self.leap_motion = leap_motion
 
     @property
     def main_gravity(self):

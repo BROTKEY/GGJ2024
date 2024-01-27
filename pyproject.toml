@@ -9,6 +9,9 @@ packages = [
     { include = "ggj2024"}
 ]
 
+[tool.poetry.scripts]
+launch_game = "ggj2024.run:main"
+launch_leapmotion = "ggj2024.LeapProvider:main"
 
 [tool.poetry.dependencies]
 python = ">=3.10"

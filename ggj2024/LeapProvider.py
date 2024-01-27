@@ -80,7 +80,7 @@ class LeapListener(leap.Listener):
                 self.right_hand_grab_angle = hand.grab_angle
 
 
-if __name__ == "__main__":
+def main():
     listener = LeapListener()
 
     connection = leap.Connection()
@@ -95,3 +95,7 @@ if __name__ == "__main__":
 
         provider.stop()
         exit(0)
+
+
+if __name__ == "__main__":
+    main()
