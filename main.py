@@ -4,6 +4,7 @@ Example of Pymunk Physics Engine Platformer
 import math
 from typing import Optional
 import arcade
+import pymunk
 import numpy as np
 
 
@@ -20,8 +21,8 @@ SPRITE_SCALING_TILES = 0.5
 SPRITE_SIZE = int(SPRITE_IMAGE_SIZE * SPRITE_SCALING_PLAYER)
 
 # Size of grid to show on screen, in number of tiles
-SCREEN_GRID_WIDTH = 25
-SCREEN_GRID_HEIGHT = 15
+SCREEN_GRID_WIDTH = 10
+SCREEN_GRID_HEIGHT = 10
 
 # Size of screen to show, in pixels
 SCREEN_WIDTH = SPRITE_SIZE * SCREEN_GRID_WIDTH
@@ -30,7 +31,7 @@ SCREEN_HEIGHT = SPRITE_SIZE * SCREEN_GRID_HEIGHT
 # --- Physics forces. Higher number, faster accelerating.
 
 # Gravity
-GRAVITY = -2000
+GRAVITY = 2500
 
 # Damping - Amount of speed lost per second
 DEFAULT_DAMPING = 1.0
@@ -45,8 +46,8 @@ DYNAMIC_ITEM_FRICTION = 0.6
 PLAYER_MASS = 2.0
 
 # Keep player from going too fast
-PLAYER_MAX_HORIZONTAL_SPEED = 1000
-PLAYER_MAX_VERTICAL_SPEED = 1000
+PLAYER_MAX_HORIZONTAL_SPEED = 10000
+PLAYER_MAX_VERTICAL_SPEED = 10000
 
 # Force applied while on the ground
 PLAYER_MOVE_FORCE_ON_GROUND = 8000
@@ -54,7 +55,9 @@ PLAYER_MOVE_FORCE_ON_GROUND = 8000
 PLAYER_MOVE_FORCE_IN_AIR = 5000
 
 # Strength of a jump
-PLAYER_JUMP_IMPULSE = 1800
+PLAYER_JUMP_IMPULSE = 1500
+
+PLAYER_DEATH_IMPULSE = 2000
 
 # Close enough to not-moving to have the animation go to idle.
 DEAD_ZONE = 0.1
@@ -229,7 +232,7 @@ class GameWindow(arcade.Window):
         self.up_pressed: bool = False
         self.down_pressed: bool = False
 
-        self.main_gravity = np.array([0, GRAVITY], dtype='float')
+        self.main_gravity = np.array([0, -GRAVITY], dtype='float')
         # self.main_gravity = np.array([-GRAVITY, -GRAVITY], dtype='float')
 
 
@@ -271,8 +274,8 @@ class GameWindow(arcade.Window):
         self.player_list = arcade.SpriteList()
 
         # Map name
-        # map_name = ":resources:/tiled_maps/pymunk_test_map.json"
         map_name = "resources/tiled_maps/gravity_test.json"
+        # map_name = "resources/tiled_maps/test_map_1.json"
 
         # Load in TileMap
         tile_map = arcade.load_tilemap(map_name, SPRITE_SCALING_TILES)
@@ -352,6 +355,29 @@ class GameWindow(arcade.Window):
         # Add kinematic sprites
         self.physics_engine.add_sprite_list(self.moving_sprites_list,
                                             body_type=arcade.PymunkPhysicsEngine.KINEMATIC)
+        
+        # Collisions
+        def handle_player_wall_collision(player_sprite, wall_sprite, arbiter: pymunk.Arbiter, space, data):
+            surfvel: pymunk.Vec2d = arbiter.surface_velocity
+            impulse: pymunk.Vec2d = arbiter.total_impulse
+            # print()
+            # print('arbiter', type(arbiter), arbiter)
+            # collpoints = arbiter.contact_point_set
+            # print('collpoints', type(collpoints), collpoints)
+            # print('surface_velocity', surfvel, 'length', surfvel.length)
+            # print('impulse', arbiter.total_impulse, 'length', impulse.length)
+            # print('ke', arbiter.total_ke)
+            # print('space', type(data), space)
+            # print('data', type(data), data)
+            if impulse.length > 500:
+                print('impulse =', impulse.length)
+            if impulse.length > PLAYER_DEATH_IMPULSE:
+                print(f'died (impulse={impulse.length})')
+
+        self.physics_engine.add_collision_handler('player', 'wall', post_handler=handle_player_wall_collision)
+            
+
+
 
     def on_key_press(self, key, modifiers):
         """Called whenever a key is pressed. """
@@ -389,13 +415,13 @@ class GameWindow(arcade.Window):
             # This one will set gravity to 0 if two opposite keys are pressed, is this good...?
             new_grav = np.array([0, 0], dtype='float')
             if self.left_pressed and not self.right_pressed:
-                new_grav[0] = GRAVITY
-            elif self.right_pressed and not self.left_pressed:
                 new_grav[0] = -GRAVITY
+            elif self.right_pressed and not self.left_pressed:
+                new_grav[0] = GRAVITY
             if self.up_pressed and not self.down_pressed:
-                new_grav[1] = -GRAVITY
-            elif self.down_pressed and not self.up_pressed:
                 new_grav[1] = GRAVITY
+            elif self.down_pressed and not self.up_pressed:
+                new_grav[1] = -GRAVITY
             self.main_gravity = new_grav
             
         if key == arcade.key.LEFT:
@@ -449,6 +475,9 @@ class GameWindow(arcade.Window):
     def on_update(self, delta_time):
         """ Movement and game logic """
 
+        # Rotate player to gravity
+        self.physics_engine.get_physics_object(self.player_sprite).shape.body.angle = np.pi - np.arctan2(*self.main_gravity_dir)
+
         is_on_ground = self.physics_engine.is_on_ground(self.player_sprite)
         # Update player forces based on keys pressed
         movement_force = PLAYER_MOVE_FORCE_ON_GROUND if is_on_ground else PLAYER_MOVE_FORCE_IN_AIR
@@ -484,9 +513,6 @@ class GameWindow(arcade.Window):
         else:
             # Player's feet are not moving. Therefore up the friction so we stop.
             self.physics_engine.set_friction(self.player_sprite, 1.0)
-
-        self.physics_engine.get_physics_object(self.player_sprite).shape.body.angle = np.pi - np.arctan2(*self.main_gravity_dir)
-        print(np.arctan2(*self.main_gravity_dir))
 
         # Move items in the physics engine
         self.physics_engine.step()
