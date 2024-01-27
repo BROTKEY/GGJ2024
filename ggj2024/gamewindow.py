@@ -59,7 +59,7 @@ class GameWindow(arcade.Window):
         # Set background color
         arcade.set_background_color(arcade.color.AMAZON)
 
-        self.current_level = LEVEL.PLATFORMS
+        self.current_level = list(LEVEL)[0]
 
     @property
     def main_gravity(self):
@@ -221,6 +221,37 @@ class GameWindow(arcade.Window):
         self.physics_engine.add_collision_handler('player', 'wall', post_handler=handle_player_wall_collision)
         self.physics_engine.add_collision_handler('player', 'item', post_handler=handle_player_item_collision)
 
+    # TODO: combinations of direction buttons could be done better, this is just for testing
+    def update_gravity(self):
+        if not self.current_level == LEVEL.GRAVITY:
+            return
+        # This one will set gravity to 0 if two opposite keys are pressed, is this good...?
+        new_grav = np.array([0, 0], dtype='float')
+        if self.left_pressed and not self.right_pressed:
+            new_grav[0] = -GRAVITY
+        elif self.right_pressed and not self.left_pressed:
+            new_grav[0] = GRAVITY
+        if self.up_pressed and not self.down_pressed:
+            new_grav[1] = GRAVITY
+        elif self.down_pressed and not self.up_pressed:
+            new_grav[1] = -GRAVITY
+        self.main_gravity = new_grav
+
+    def update_platforms(self, lx, ly, rx, ry):
+        if not self.current_level == LEVEL.PLATFORMS:
+            return
+
+        # update platform positions based on player input
+        if self.platform_left:
+            pos = (500 + lx, ly)
+            self.physics_engine.set_position(self.platform_left, pos)
+            #self.physics_engine.set_position(self.platform_left, self.last_mouse_position_left)
+
+        if self.platform_right:
+            pos = (500 + rx, ry)
+            self.physics_engine.set_position(self.platform_right, pos)
+            #self.physics_engine.set_position(self.platform_right, self.last_mouse_position_right)
+
     def on_key_press(self, key, modifiers):
         """Called whenever a key is pressed. """
         match key:
@@ -253,40 +284,26 @@ class GameWindow(arcade.Window):
                         impulse = -self.main_gravity_dir * PLAYER_JUMP_IMPULSE
                         impulse = tuple(impulse)
                     self.physics_engine.apply_impulse(self.player_sprite, impulse)
-            # Gravity modifier
+
             case arcade.key.ENTER:
                 self.enter_pressed = True
-                self.main_gravity = -self.main_gravity
-
-        # TODO: combinations of direction buttons could be done better, this is just for testing
-        def update_gravity():
-            # This one will set gravity to 0 if two opposite keys are pressed, is this good...?
-            new_grav = np.array([0, 0], dtype='float')
-            if self.left_pressed and not self.right_pressed:
-                new_grav[0] = -GRAVITY
-            elif self.right_pressed and not self.left_pressed:
-                new_grav[0] = GRAVITY
-            if self.up_pressed and not self.down_pressed:
-                new_grav[1] = GRAVITY
-            elif self.down_pressed and not self.up_pressed:
-                new_grav[1] = -GRAVITY
-            self.main_gravity = new_grav
-
+                next_index = (list(LEVEL).index(self.current_level) + 1) % len(LEVEL)
+                self.current_level = list(LEVEL)[next_index]
         if key == arcade.key.LEFT:
             self.left_pressed = True
-            update_gravity()
+            self.update_gravity()
             # self.main_gravity = np.array([GRAVITY, 0], dtype='float')
         elif key == arcade.key.RIGHT:
             self.right_pressed = True
-            update_gravity()
+            self.update_gravity()
             # self.main_gravity = np.array([-GRAVITY, 0], dtype='float')
         elif key == arcade.key.UP:
             self.up_pressed = True
-            update_gravity()
+            self.update_gravity()
             # self.main_gravity = np.array([0, -GRAVITY], dtype='float')
         elif key == arcade.key.DOWN:
             self.down_pressed = True
-            update_gravity()
+            self.update_gravity()
             # self.main_gravity = np.array([0, GRAVITY], dtype='float')
 
     def on_key_release(self, key, modifiers):
@@ -385,16 +402,7 @@ class GameWindow(arcade.Window):
             # Player's feet are not moving. Therefore up the friction so we stop.
             self.physics_engine.set_friction(self.player_sprite, 1.0)
 
-        # update platform positions based on player input
-        if self.platform_left:
-            pos = (500 + lx, ly)
-            self.physics_engine.set_position(self.platform_left, pos)
-            #self.physics_engine.set_position(self.platform_left, self.last_mouse_position_left)
-
-        if self.platform_right:
-            pos = (500 + rx, ry)
-            self.physics_engine.set_position(self.platform_right, pos)
-            #self.physics_engine.set_position(self.platform_right, self.last_mouse_position_right)
+        self.update_platforms(lx, ly, rx, ry)
 
         # Move items in the physics engine
         self.physics_engine.step()
