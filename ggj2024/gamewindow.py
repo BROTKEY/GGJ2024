@@ -80,6 +80,7 @@ class GameWindow(arcade.Window):
         self.audio_hits = [arcade.load_sound(file, False) for file in hit_sound_files[:max_hitsounds]]
 
         self.start_tile: arcade.Sprite = None
+        self.start_center: tuple[int, int] = None
         self.finish_tiles: arcade.Sprite = None
 
         # Playing the audio
@@ -141,8 +142,9 @@ class GameWindow(arcade.Window):
             self.start_tile = start_sprite
         else:
             print("WARNING: No start was defined, player will spawn in the center of the level")
-            self.player_sprite.center_x = (tile_map.width * SPRITE_SIZE) / 2
-            self.player_sprite.center_y = (tile_map.height * SPRITE_SIZE) / 2
+            self.start_tile = None
+            self.start_center = ((tile_map.width * SPRITE_SIZE) / 2, (tile_map.height * SPRITE_SIZE) / 2)
+            self.player_sprite.center_x, self.player_sprite.center_y = self.start_center
 
         # Add to player sprite list
         self.player_list.append(self.player_sprite)
