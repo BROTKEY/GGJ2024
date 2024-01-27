@@ -138,6 +138,7 @@ class GameWindow(arcade.Window):
             start_sprite: arcade.Sprite = start_sprite_list[0]
             self.player_sprite.center_x = start_sprite.center_x
             self.player_sprite.center_y = start_sprite.center_y
+            self.start_tile = start_sprite
         else:
             print("WARNING: No start was defined, player will spawn in the center of the level")
             self.player_sprite.center_x = (tile_map.width * SPRITE_SIZE) / 2
