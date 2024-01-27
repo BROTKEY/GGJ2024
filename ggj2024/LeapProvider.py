@@ -25,7 +25,7 @@ class LeapProvider:
 
     def client_handler(self, client, addr):
         while True:
-            data = "{};{};{}|{};{};{}".format(*self.leap.left_hand_position, *self.leap.right_hand_position)
+            data = "{};{};{}|{};{};{}|{}|{}".format(*self.leap.left_hand_position, *self.leap.right_hand_position, self.leap.left_hand_grab_angle, self.leap.right_hand_grab_angle)
 
             try:
                 client.send(bytes(data, 'utf-8'))
@@ -55,6 +55,9 @@ class LeapListener(leap.Listener):
     left_hand_position = (0, 0, 0)
     right_hand_position = (0, 0, 0)
 
+    left_hand_grab_angle = 0
+    right_hand_grab_angle = 0
+
     def on_connection_event(self, event):
         print("Connected")
 
@@ -71,8 +74,10 @@ class LeapListener(leap.Listener):
         for hand in event.hands:
             if str(hand.type) == "HandType.Left":
                 self.left_hand_position = (hand.palm.position.x, hand.palm.position.y, hand.palm.position.z)
+                self.left_hand_grab_angle = hand.grab_angle
             else:
                 self.right_hand_position = (hand.palm.position.x, hand.palm.position.y, hand.palm.position.z)
+                self.right_hand_grab_angle = hand.grab_angle
 
 
 if __name__ == "__main__":
