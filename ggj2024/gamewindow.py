@@ -72,8 +72,9 @@ class GameWindow(arcade.Window):
 
         # Loading the audio file
         self.audio_theme = arcade.load_sound('resources/sound/theme.mp3', False)
-        hit_sound_files = pathlib.Path('resources/sound/kenney_impact-sounds/Audio/').glob('*.ogg')
-        self.audio_hits = [arcade.load_sound(file, False) for file in hit_sound_files]
+        hit_sound_files = list(pathlib.Path('resources/sound/animal').glob('*.wav')) + list(pathlib.Path('resources/sound/kenney_impact-sounds/Audio/').glob('*.ogg'))
+        max_hitsounds = min(10, len(hit_sound_files))
+        self.audio_hits = [arcade.load_sound(file, False) for file in hit_sound_files[:max_hitsounds]]
 
         # Playing the audio
         arcade.play_sound(self.audio_theme, 1.0, -1, True)
