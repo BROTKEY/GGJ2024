@@ -61,6 +61,8 @@ class GameWindow(arcade.Window):
 
         self.current_level = list(LEVEL)[1]
 
+        self.leap_motion = False
+
     @property
     def main_gravity(self):
         return self._main_gravity
@@ -249,16 +251,20 @@ class GameWindow(arcade.Window):
         if not self.current_level == LEVEL.PLATFORMS:
             return
 
-        # update platform positions based on player input
-        if self.platform_left:
-            pos = (500 + lx, ly)
-            self.physics_engine.set_position(self.platform_left, pos)
-            #self.physics_engine.set_position(self.platform_left, self.last_mouse_position_left)
-
-        if self.platform_right:
-            pos = (500 + rx, ry)
-            self.physics_engine.set_position(self.platform_right, pos)
-            #self.physics_engine.set_position(self.platform_right, self.last_mouse_position_right)
+        if self.leap_motion:
+            # update platform positions based on second player input
+            if self.platform_left:
+                pos = (500 + lx, ly)
+                self.physics_engine.set_position(self.platform_left, pos)
+            if self.platform_right:
+                pos = (500 + rx, ry)
+                self.physics_engine.set_position(self.platform_right, pos)
+        else:
+            # update platform position based on mouse input
+            if self.platform_left:
+                self.physics_engine.set_position(self.platform_left, self.last_mouse_position_left)
+            if self.platform_right:
+                self.physics_engine.set_position(self.platform_right, self.last_mouse_position_right)
 
     def on_key_press(self, key, modifiers):
         """Called whenever a key is pressed. """
@@ -340,22 +346,28 @@ class GameWindow(arcade.Window):
 
     def on_mouse_press(self, x, y, button, modifiers):
         """ Called whenever the mouse button is clicked. """
-        # match button:
-        #     case arcade.MOUSE_BUTTON_LEFT:
-        #         self.last_mouse_position_left = x, y
-        #         self.platform_left = self.platform_list[0]
-        #     case arcade.MOUSE_BUTTON_RIGHT:
-        #         self.last_mouse_position_right = x, y
-        #         self.platform_right = self.platform_list[1]
-        pass
+        if self.leap_motion:
+            # mouse interaction is only required when debugging
+            return
+
+        match button:
+            case arcade.MOUSE_BUTTON_LEFT:
+                self.last_mouse_position_left = x, y
+                self.platform_left = self.platform_list[0]
+            case arcade.MOUSE_BUTTON_RIGHT:
+                self.last_mouse_position_right = x, y
+                self.platform_right = self.platform_list[1]
 
     def on_mouse_release(self, x, y, button, modifiers):
-        # match button:
-        #     case arcade.MOUSE_BUTTON_LEFT:
-        #         self.platform_left = None
-        #     case arcade.MOUSE_BUTTON_RIGHT:
-        #         self.platform_right = None
-        pass
+        if self.leap_motion:
+            # mouse interaction is only required when debugging
+            return
+
+        match button:
+            case arcade.MOUSE_BUTTON_LEFT:
+                self.platform_left = None
+            case arcade.MOUSE_BUTTON_RIGHT:
+                self.platform_right = None
 
     def on_mouse_motion(self, x, y, dx, dy):
         if self.platform_left is not None:
