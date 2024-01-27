@@ -201,6 +201,11 @@ class GameWindow(arcade.Window):
         self.physics_engine.add_sprite_list(self.background_list,
                                             collision_type="background",
                                             body_type=arcade.PymunkPhysicsEngine.STATIC)
+    
+        self.physics_engine.add_sprite_list(self.soft_list,
+                                            collision_type='soft',
+                                            body_type=arcade.PymunkPhysicsEngine.STATIC,
+                                            elasticity=1.0)
 
         # add platforms moved by second player
         self.physics_engine.add_sprite_list(
@@ -574,4 +579,5 @@ class GameWindow(arcade.Window):
         self.platform_list.draw()
         self.item_list.draw()
         self.player_list.draw()
+        self.soft_list.draw()
         self.particle_list.draw()
