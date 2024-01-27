@@ -232,8 +232,13 @@ class GameWindow(arcade.Window):
         if hand_gesture_update:
             left_hand = (self.hands.left_hand.x, self.hands.left_hand.y)
             right_hand = (self.hands.right_hand.x, self.hands.right_hand.y)
+
             # update gravity based on hand positions of second player
             v = np.array(right_hand) - np.array(left_hand)
+
+            if np.linalg.norm(v) < 1e-6:
+                return
+
             new_grav = (v[1], -v[0])
             new_grav = normalize_vector(new_grav) * GRAVITY
 
