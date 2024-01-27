@@ -374,7 +374,8 @@ class GameWindow(arcade.Window):
                 if FORCES_RELATIVE_TO_PLAYER:
                     impulse = (0, PLAYER_JUMP_IMPULSE)
                 else:
-                    impulse = -self.main_gravity / np.linalg.norm(self.main_gravity)  * PLAYER_JUMP_IMPULSE
+                    # impulse = -self.main_gravity / np.linalg.norm(self.main_gravity)  * PLAYER_JUMP_IMPULSE
+                    impulse = -self.main_gravity_dir * PLAYER_JUMP_IMPULSE
                     impulse = tuple(impulse)
                 self.physics_engine.apply_impulse(self.player_sprite, impulse)
         
