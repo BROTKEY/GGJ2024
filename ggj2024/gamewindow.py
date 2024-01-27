@@ -542,11 +542,22 @@ class GameWindow(arcade.Window):
         """ Movement and game logic """
 
         # Rotate player to gravity
-        self.physics_engine.get_physics_object(self.player_sprite).shape.body.angle = np.pi - np.arctan2(*self.main_gravity_dir)
+        player_object = self.physics_engine.get_physics_object(self.player_sprite)
+        gravity_angle = np.arctan2(*self.main_gravity_dir)
+        player_object.shape.body.angle = np.pi - gravity_angle
+        player_velocity: pymunk.Vec2d = player_object.body.velocity.rotated(gravity_angle)
+        speed = player_velocity.x
 
         is_on_ground = self.physics_engine.is_on_ground(self.player_sprite)
+        # if is_on_ground:
+            # self.physics_engine.get_physics_object(self.player_sprite).body.
         # Update player forces based on keys pressed
-        movement_force = PLAYER_MOVE_FORCE_ON_GROUND if is_on_ground else PLAYER_MOVE_FORCE_IN_AIR
+        
+        if (is_on_ground and speed >= PLAYER_MAX_WALKING_SPEED) or (not is_on_ground and speed >= PLAYER_MAX_AIRCONTROL_SPEED):
+            # Dont'nt allow acceleration if max walking speed has been reached
+            movement_force = 0
+        else:
+            movement_force = PLAYER_MOVE_FORCE_ON_GROUND if is_on_ground else PLAYER_MOVE_FORCE_IN_AIR
         if self.a_pressed and not self.d_pressed:
             # Create a force to the left, perpendicular to the gravity.
             # Gravity pulls down so this actually needs to be the gravity rotated *clockwise*
