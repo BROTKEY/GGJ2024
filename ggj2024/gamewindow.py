@@ -44,6 +44,7 @@ class GameWindow(arcade.Window):
         self.particle_list: Optional[arcade.SpriteList] = None
         self.background_list: Optional[arcade.SpriteList] = None
         self.soft_list: Optional[arcade.SpriteList] = None
+        self.finish_list: Optional[arcade.SpriteList] = None
 
         # Track the current state of what key is pressed
         self.a_pressed: bool = False
@@ -78,6 +79,10 @@ class GameWindow(arcade.Window):
         max_hitsounds = min(10, len(hit_sound_files))
         self.audio_hits = [arcade.load_sound(file, False) for file in hit_sound_files[:max_hitsounds]]
 
+        self.start_tile: arcade.Sprite = None
+        self.start_center: tuple[int, int] = None
+        self.finish_tiles: arcade.Sprite = None
+
         # Playing the audio
         arcade.play_sound(self.audio_theme, 1.0, -1, True)
 
@@ -108,7 +113,8 @@ class GameWindow(arcade.Window):
         self.wall_list = tile_map.sprite_lists["Platforms"]
         self.item_list = tile_map.sprite_lists["Dynamic Items"]
         self.background_list = tile_map.sprite_lists["Background"]
-        self.soft_list = tile_map.sprite_lists['Soft']
+        self.soft_list = tile_map.sprite_lists.get('Soft') or arcade.SpriteList()
+        self.finish_list = tile_map.sprite_lists.get('Finish') or arcade.SpriteList()
 
         # player-controlled platforms
         size = 64
@@ -128,17 +134,25 @@ class GameWindow(arcade.Window):
         # Create player sprite
         self.player_sprite = PlayerSprite(hit_box_algorithm="Detailed")
 
-        # Set player location
+        # Get player start from level
+        start_sprite_list = tile_map.sprite_lists.get('Start')
+        if start_sprite_list:
+            start_sprite: arcade.Sprite = start_sprite_list[0]
+            self.player_sprite.center_x = start_sprite.center_x
+            self.player_sprite.center_y = start_sprite.center_y
+            self.start_tile = start_sprite
+        else:
+            print("WARNING: No start was defined, player will spawn in the center of the level")
+            self.start_tile = None
+            self.start_center = ((tile_map.width * SPRITE_SIZE) / 2, (tile_map.height * SPRITE_SIZE) / 2)
+            self.player_sprite.center_x, self.player_sprite.center_y = self.start_center
 
-        grid_x = 1
-        grid_y = 1
-        # self.player_sprite.center_x = SPRITE_SIZE * grid_x + SPRITE_SIZE / 2
-        # self.player_sprite.center_y = SPRITE_SIZE * grid_y + SPRITE_SIZE / 2
-        # Start at center of map
-        self.player_sprite.center_x = (tile_map.width * SPRITE_SIZE) / 2
-        self.player_sprite.center_y = (tile_map.height * SPRITE_SIZE) / 2
         # Add to player sprite list
         self.player_list.append(self.player_sprite)
+
+        # Get finish
+        if not self.finish_list:
+            print('WARNING: No finish was defined, this level is unbeatable!')
 
         # Used for dragging shapes around with the mouse
         self.platform_left = self.platform_list[0]
@@ -202,6 +216,15 @@ class GameWindow(arcade.Window):
         self.physics_engine.add_sprite_list(self.background_list,
                                             collision_type="background",
                                             body_type=arcade.PymunkPhysicsEngine.STATIC)
+    
+        self.physics_engine.add_sprite_list(self.soft_list,
+                                            collision_type='soft',
+                                            body_type=arcade.PymunkPhysicsEngine.STATIC,
+                                            elasticity=1.0)
+        
+        self.physics_engine.add_sprite_list(self.finish_list,
+                                            collision_type='finish',
+                                            body_type=arcade.PymunkPhysicsEngine.STATIC)
 
         # add platforms moved by second player
         self.physics_engine.add_sprite_list(
@@ -232,8 +255,15 @@ class GameWindow(arcade.Window):
                 print(f'hit the ground too hard (impulse={impulse.length})')
                 self.kill_player('Object collision')
 
+        def handle_player_finish_collision(player: PlayerSprite, finish: arcade.Sprite, arbiter: pymunk.Arbiter, space, data):
+            # TODO level done
+            print('Congratulations, you reached the goal!')
+            # return False to cancel collisions
+            return False
+
         self.physics_engine.add_collision_handler('player', 'wall', post_handler=handle_player_wall_collision)
         self.physics_engine.add_collision_handler('player', 'item', post_handler=handle_player_item_collision)
+        self.physics_engine.add_collision_handler('player', 'finish', begin_handler=handle_player_finish_collision)
 
         def handle_particle_x_collision(particle: ParticleSprite, other: arcade.Sprite, arbiter: pymunk.Arbiter, space, data):
             self.physics_engine.remove_sprite(particle)
@@ -282,9 +312,15 @@ class GameWindow(arcade.Window):
         self.physics_engine.add_collision_handler('particle', 'soft', post_handler=handle_particle_x_collision)
         self.physics_engine.add_collision_handler('particle', 'player', pre_handler=lambda *args: False)
         self.physics_engine.add_collision_handler('particle', 'background', post_handler=handle_particle_x_collision)
+        
+        self.physics_engine.add_collision_handler('particle', 'finish', pre_handler=lambda *args: False)
+        self.physics_engine.add_collision_handler('item', 'finish', pre_handler=lambda *args: False)
+        self.physics_engine.add_collision_handler('wall', 'finish', pre_handler=lambda *args: False)
+        self.physics_engine.add_collision_handler('soft', 'finish', pre_handler=lambda *args: False)
 
         self.physics_engine.add_collision_handler('background', 'player', pre_handler=lambda *args: False)
         self.physics_engine.add_collision_handler('background', 'item', pre_handler=lambda *args: False)
+        self.physics_engine.add_collision_handler('background', 'finish', pre_handler=lambda *args: False)
 
     @property
     def main_gravity(self):
@@ -584,4 +620,5 @@ class GameWindow(arcade.Window):
         self.platform_list.draw()
         self.item_list.draw()
         self.player_list.draw()
+        self.soft_list.draw()
         self.particle_list.draw()

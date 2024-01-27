@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<tileset version="1.8" tiledversion="1.8.0" name="General" tilewidth="256" tileheight="256" tilecount="19" columns="0">
+<tileset version="1.8" tiledversion="1.8.0" name="General" tilewidth="256" tileheight="256" tilecount="24" columns="0">
  <grid orientation="orthogonal" width="1" height="1"/>
  <tile id="20">
   <image width="128" height="128" source="TILES/fence.png"/>
@@ -67,5 +67,26 @@
  </tile>
  <tile id="59">
   <image width="128" height="128" source="TILES/tree_8.png"/>
+ </tile>
+ <tile id="65">
+  <image width="128" height="128" source="TILES/corner-for-AFO.png"/>
+ </tile>
+ <tile id="66">
+  <image width="128" height="128" source="TILES/Finish.png"/>
+  <objectgroup draworder="index" id="2">
+   <object id="1" x="0" y="-1" width="128" height="130"/>
+  </objectgroup>
+ </tile>
+ <tile id="67">
+  <image width="128" height="128" source="TILES/Start.png"/>
+  <objectgroup draworder="index" id="2">
+   <object id="1" x="1" y="0" width="129" height="128"/>
+  </objectgroup>
+ </tile>
+ <tile id="71">
+  <image width="256" height="256" source="TILES/Planet.png"/>
+ </tile>
+ <tile id="72">
+  <image width="128" height="128" source="TILES/Star.png"/>
  </tile>
 </tileset>
