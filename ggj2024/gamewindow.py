@@ -142,6 +142,7 @@ class GameWindow(arcade.Window):
         # Used for dragging shapes around with the mouse
         self.platform_left = self.platform_list[0]
         self.platform_right = self.platform_list[1]
+        self.last_mouse_position = 0, 0
         self.last_mouse_position_left = 0, 0
         self.last_mouse_position_right = 0, 0
 
@@ -385,6 +386,7 @@ class GameWindow(arcade.Window):
             self.last_mouse_position_left = (x, y)
         if self.platform_right is not None:
             self.last_mouse_position_right = (x, y)
+        self.last_mouse_position = (x, y)
 
     def on_update(self, delta_time):
         """ Movement and game logic """
