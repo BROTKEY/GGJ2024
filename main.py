@@ -83,6 +83,7 @@ def normalize_vector(vec: np.ndarray, inplace=False) -> np.ndarray:
     else:
         return vec / np.linalg.norm(vec)
 
+
 def rotate90_cw(vec: np.ndarray, inplace=False) -> np.ndarray:
     if inplace:
         x = vec[0]
@@ -94,6 +95,7 @@ def rotate90_cw(vec: np.ndarray, inplace=False) -> np.ndarray:
             vec[1],
             -vec[0]
         ])
+
 
 def rotate90_ccw(vec: np.ndarray, inplace=False) -> np.ndarray:
     if inplace:
@@ -156,7 +158,6 @@ class PlayerSprite(arcade.Sprite):
         self.x_odometer = 0
         self.y_odometer = 0
 
-
     def pymunk_moved(self, physics_engine, dx, dy, d_angle):
         """ Handle being moved by the pymunk engine """
         # Figure out if we need to face left or right
@@ -197,7 +198,6 @@ class PlayerSprite(arcade.Sprite):
             if self.cur_texture > 7:
                 self.cur_texture = 0
             self.texture = self.walk_textures[self.cur_texture][self.character_face_direction]
-
 
 
 class PhysicsSprite(arcade.Sprite):
