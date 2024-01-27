@@ -230,22 +230,26 @@ class GameWindow(arcade.Window):
             return
 
         if hand_gesture_update:
-            left_hand = (self.hands.left_hand.x, self.hands.left_hand.y)
-            right_hand = (self.hands.right_hand.x, self.hands.right_hand.y)
+            if self.leap_motion:
+                left_hand = (self.hands.left_hand.x, self.hands.left_hand.y)
+                right_hand = (self.hands.right_hand.x, self.hands.right_hand.y)
 
-            # update gravity based on hand positions of second player
-            v = np.array(right_hand) - np.array(left_hand)
+                # update gravity based on hand positions of second player
+                v = np.array(right_hand) - np.array(left_hand)
 
-            if np.linalg.norm(v) < 1e-6:
-                return
+                if np.linalg.norm(v) < 1e-6:
+                    return
 
-            new_grav = (v[1], -v[0])
-            new_grav = normalize_vector(new_grav) * GRAVITY
+                new_grav = (v[1], -v[0])
+                new_grav = normalize_vector(new_grav) * GRAVITY
 
-            FIST_THRESHOLD = 2.5
-            fists_shown = self.hands.left_hand.grab_angle > FIST_THRESHOLD and self.hands.right_hand.grab_angle > FIST_THRESHOLD
-            if fists_shown:
-                new_grav = -new_grav
+                FIST_THRESHOLD = 2.5
+                fists_shown = self.hands.left_hand.grab_angle > FIST_THRESHOLD and self.hands.right_hand.grab_angle > FIST_THRESHOLD
+                if fists_shown:
+                    new_grav = -new_grav
+            else:
+                new_grav = np.array([SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2]) - np.array(self.last_mouse_position)
+                new_grav = normalize_vector(new_grav) * GRAVITY
         else:
             # This one will set gravity to 0 if two opposite keys are pressed, is this good...?
             new_grav = np.array([0, 0], dtype='float')
