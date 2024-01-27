@@ -190,6 +190,7 @@ class GameWindow(arcade.Window):
                 print('object collision, impulse =', impulse.length)
             if impulse.length > PLAYER_DEATH_IMPULSE:
                 print(f'hit the ground too hard (impulse={impulse.length})')
+                self.kill_player('Object collision')
 
         self.physics_engine.add_collision_handler('player', 'wall', post_handler=handle_player_wall_collision)
         self.physics_engine.add_collision_handler('player', 'item', post_handler=handle_player_item_collision)
@@ -241,6 +242,7 @@ class GameWindow(arcade.Window):
         
         self.physics_engine.add_collision_handler('particle', 'wall', post_handler=handle_particle_x_collision)
         self.physics_engine.add_collision_handler('particle', 'item', post_handler=handle_particle_x_collision)
+        self.physics_engine.add_collision_handler('particle', 'player', pre_handler=lambda *args: False)
 
 
     @property
@@ -258,10 +260,9 @@ class GameWindow(arcade.Window):
             self._main_gravity_direction = normalize_vector(self._main_gravity)
         else:
             # Don't allow zero gravity. Set it to what it was before instead, just very small
-            print('DEBUG: It was attempted to set gravity to 0, setting it to a very low value instead')
+            print('WARNING: It was attempted to set gravity to 0, setting it to a very low value instead')
             self._main_gravity = self._main_gravity_direction * 1e-9
             # No need to set direction vector as it didn't change
-            # self._main_gravity_direction = np.zeros((2, ))
         if self.physics_engine:
             self.physics_engine.space.gravity = tuple(self._main_gravity)
 
@@ -272,23 +273,18 @@ class GameWindow(arcade.Window):
     
     def kill_player(self, reason):
         print('Player died:', reason)
-        # Add 10 particles
+        # Add 25 particles
         player = self.player_sprite
         x, y = player.position
-        # particle_size = 4
         particle_size_min = 1
         particle_size_variation = 2
-        # particle_size_max = 3
-        particle_mass = 1
-        for i in range(20):
-            particle_size = np.random.rand()*particle_size_variation+particle_size_min
-            # particle = ParticleSprite(":resources:images/items/gold_1.png",
-            #                           x, y, radius=particle_size, mass=particle_mass)
+        particle_mass = 0.5
+        for i in range(25):
+            particle_size = np.random.rand()*particle_size_variation + particle_size_min
             particle = ParticleSprite(x, y, particle_size, particle_mass)
             self.particle_list.append(particle)
             self.physics_engine.add_sprite(particle, particle_mass, radius=particle_size, collision_type='particle')
-            # self.physics_engine.apply_impulse(particle, (1000, 1000))
-            self.physics_engine.apply_impulse(particle, tuple((np.random.rand(2)-.5)*1000))
+            self.physics_engine.apply_impulse(particle, tuple((np.random.rand(2)-.5)*2000))
             
 
 
@@ -320,7 +316,6 @@ class GameWindow(arcade.Window):
                     if FORCES_RELATIVE_TO_PLAYER:
                         impulse = (0, PLAYER_JUMP_IMPULSE)
                     else:
-                        # impulse = -self.main_gravity / np.linalg.norm(self.main_gravity)  * PLAYER_JUMP_IMPULSE
                         impulse = -self.main_gravity_dir * PLAYER_JUMP_IMPULSE
                         impulse = tuple(impulse)
                     self.physics_engine.apply_impulse(self.player_sprite, impulse)
@@ -382,14 +377,7 @@ class GameWindow(arcade.Window):
 
     def on_mouse_press(self, x, y, button, modifiers):
         """ Called whenever the mouse button is clicked. """
-        if button == arcade.MOUSE_BUTTON_LEFT:
-            # Test: spawn particle
-            radius = 2
-            mass = 1
-            particle = ParticleSprite(":resources:images/items/gold_1.png",
-                                      x, y, radius=radius, mass=mass)
-            self.item_list.append(particle)
-            self.physics_engine.add_sprite(particle, mass=mass,radius=radius)
+        # if button == arcade.MOUSE_BUTTON_LEFT:
             # # Test: spawn box
             # sprite = DummyBoxSprite(x, y, 32, 10.0)
             # self.item_list.append(sprite)
