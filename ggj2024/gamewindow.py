@@ -309,6 +309,22 @@ class GameWindow(arcade.Window):
 
     def on_mouse_press(self, x, y, button, modifiers):
         """ Called whenever the mouse button is clicked. """
+        if button == arcade.MOUSE_BUTTON_LEFT:
+            # Test: spawn box
+            # box = arcade.Sprite(':resources:/')
+            size = 32
+            mass = 1.0
+            # x = 10 + size * i
+            # y = 10
+            moment = pymunk.moment_for_box(mass, (size, size))
+            body = pymunk.Body(mass, moment)
+            body.position = pymunk.Vec2d(x, y)
+            shape = pymunk.Poly.create_box(body, (size, size))
+            shape.elasticity = 0.2
+            shape.friction = 0.9
+            sprite = ControllablePlatformSprite(shape, ":resources:images/tiles/boxCrate_double.png", width=size, height=size)
+            # self.platform_list.append(sprite)
+            self.item_list.append(sprite)
         # match button:
         #     case arcade.MOUSE_BUTTON_LEFT:
         #         self.last_mouse_position_left = x, y
@@ -338,7 +354,7 @@ class GameWindow(arcade.Window):
         ly = self.hands.left_hand.y
         rx = self.hands.right_hand.x
         ry = self.hands.right_hand.y
-        print(f"L = ({lx:.1f}, {ly:.1f}) R = ({rx:.1f}, {ry:.1f})")
+        # print(f"L = ({lx:.1f}, {ly:.1f}) R = ({rx:.1f}, {ry:.1f})")
 
         # Rotate player to gravity
         self.physics_engine.get_physics_object(self.player_sprite).shape.body.angle = np.pi - np.arctan2(*self.main_gravity_dir)
@@ -369,12 +385,9 @@ class GameWindow(arcade.Window):
             # TODO: is this really a good idea?
             self.physics_engine.set_friction(self.player_sprite, 0)
         elif self.w_pressed and not self.s_pressed:
-            # Create a force to the top, in the opposite direction of the gravity.
-            # force_dir = rotate90_ccw(self.main_gravity_dir)
             pass
         elif self.s_pressed and not self.w_pressed:
             pass
-
         else:
             # Player's feet are not moving. Therefore up the friction so we stop.
             self.physics_engine.set_friction(self.player_sprite, 1.0)
