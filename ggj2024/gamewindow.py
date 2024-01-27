@@ -205,7 +205,6 @@ class GameWindow(arcade.Window):
                 other.position[1] - other.height/2)
             contact: pymunk.ContactPoint = arbiter.contact_point_set.points[0].point_b
             contact_rel: pymunk.Vec2d = contact - other_pos
-            
             if other in self.splatter_texture_dict:
                 image = self.splatter_texture_dict[other]
             else:
@@ -226,7 +225,6 @@ class GameWindow(arcade.Window):
             y += 0.05 * image.height
             x = int(x)
             y = int(y)
-
             # Create alpha mask of original image, multiply it with that
             alphamask = np.array(image)[:,:,3:4].astype('float')/255.
             alphamask = np.ceil(alphamask)
@@ -234,11 +232,9 @@ class GameWindow(arcade.Window):
             pixdata = np.array(image)
             masked = pixdata * alphamask
             image = Image.fromarray(masked.astype('uint8'))
-
             self.splatter_texture_dict[other] = image
             texture = arcade.Texture(tex_name, image)
             other.texture = texture
-
         
         self.physics_engine.add_collision_handler('particle', 'wall', post_handler=handle_particle_x_collision)
         self.physics_engine.add_collision_handler('particle', 'item', post_handler=handle_particle_x_collision)
