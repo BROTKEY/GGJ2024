@@ -69,3 +69,6 @@ DISTANCE_TO_CHANGE_TEXTURE = 20
 # Defines whether forces on the player are considered to be in the Player's coordinate system
 # This switch is basically here to keep some of the old code...
 FORCES_RELATIVE_TO_PLAYER = True
+
+# Defines how many (additionally spawned) diversifier items can exist at one time
+MAX_SPAWNED_ITEMS = 10

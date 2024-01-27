@@ -5,6 +5,7 @@ import pymunk
 
 import numpy as np
 from PIL import Image
+from pathlib import Path
 
 from typing import Optional
 from enum import Enum
@@ -45,6 +46,9 @@ class GameWindow(arcade.Window):
         self.background_list: Optional[arcade.SpriteList] = None
         self.soft_list: Optional[arcade.SpriteList] = None
         self.finish_list: Optional[arcade.SpriteList] = None
+        self.spawned_item_list: Optional[arcade.SpriteList] = None
+
+        self.spawnable_assets: list[str] = []
 
         # Track the current state of what key is pressed
         self.a_pressed: bool = False
@@ -93,6 +97,7 @@ class GameWindow(arcade.Window):
         self.player_list = arcade.SpriteList()
         self.platform_list = arcade.SpriteList()
         self.particle_list = arcade.SpriteList()
+        self.spawned_item_list = arcade.SpriteList()
 
         # Map name
         map_name = "resources/tiled_maps/Level2.json"
@@ -130,6 +135,8 @@ class GameWindow(arcade.Window):
             shape.friction = 0.9
             sprite = ControllablePlatformSprite(shape, ":resources:images/tiles/boxCrate_double.png", width=2*size, height=size)
             self.platform_list.append(sprite)
+
+        self.spawnable_assets = [str(fn) for fn in Path('assets/AFOPNGS/').glob('*.png')]
 
         # Create player sprite
         self.player_sprite = PlayerSprite(hit_box_algorithm="Detailed")
@@ -364,6 +371,25 @@ class GameWindow(arcade.Window):
 
         self.respawn_player = True
 
+    def spawn_item(self, filename, center_x, center_y, width, height, mass=2.0, friction=0.2, elasticity=None):
+        """Spawn one of the diversifier items into the scene"""
+        sprite = arcade.Sprite(filename)
+        sprite.width = width
+        sprite.height = height
+        sprite.center_x = center_x
+        sprite.center_y = center_y
+        while len(self.spawned_item_list) >= MAX_SPAWNED_ITEMS:
+            removed = self.spawned_item_list.pop(0)
+            self.physics_engine.remove_sprite(removed)
+        self.spawned_item_list.append(sprite)
+        self.physics_engine.add_sprite(sprite, mass, friction, elasticity, collision_type='item')
+        return sprite
+
+    def spawn_random_item(self, center_x, center_y, width=1, height=1, mass=2.0, friction=0.2, elasticity=None):
+        return self.spawn_item(np.random.choice(self.spawnable_assets),
+                               center_x, center_y, width, height, mass, friction, elasticity)
+        
+
     # TODO: combinations of direction buttons could be done better, this is just for testing
     def update_gravity(self, hand_gesture_update=False):
         if not self.current_level == LEVEL.GRAVITY:
@@ -503,7 +529,11 @@ class GameWindow(arcade.Window):
     def on_mouse_press(self, x, y, button, modifiers):
         """ Called whenever the mouse button is clicked. """
         if self.leap_motion:
+            # HACK debug: spawn random item
             # mouse interaction is only required when debugging
+            print('spawning item at', x, y)
+            self.spawn_random_item(x+self.camera.position.x, y+self.camera.position.y, 64, 64, mass=5)
+            
             return
 
         match button:
@@ -626,6 +656,7 @@ class GameWindow(arcade.Window):
         self.wall_list.draw()
         self.platform_list.draw()
         self.item_list.draw()
+        self.spawned_item_list.draw()
         self.player_list.draw()
         self.soft_list.draw()
         self.particle_list.draw()
