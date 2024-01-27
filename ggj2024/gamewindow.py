@@ -68,7 +68,7 @@ class GameWindow(arcade.Window):
         # Set background color
         arcade.set_background_color(arcade.color.AMAZON)
 
-        self.current_level = list(LEVEL)[1]
+        self.current_level = list(LEVEL)[0]
 
         self.leap_motion = leap_motion
 
