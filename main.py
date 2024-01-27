@@ -433,13 +433,12 @@ class GameWindow(arcade.Window):
 
     def on_mouse_motion(self, x, y, dx, dy):
         if self.platform_left is not None:
-            self.physics_engine.set_position(self.platform_left, (x, y))
+            self.last_mouse_position_left = (x, y)
         if self.platform_right is not None:
-            self.physics_engine.set_position(self.platform_right, (x, y))
+            self.last_mouse_position_right = (x, y)
 
     def on_update(self, delta_time):
         """ Movement and game logic """
-
         is_on_ground = self.physics_engine.is_on_ground(self.player_sprite)
         # Update player forces based on keys pressed
         if self.left_pressed and not self.right_pressed:
@@ -477,6 +476,13 @@ class GameWindow(arcade.Window):
         else:
             # Player's feet are not moving. Therefore up the friction so we stop.
             self.physics_engine.set_friction(self.player_sprite, 1.0)
+
+        # update platform positions based on player input
+        if self.platform_left:
+            self.physics_engine.set_position(self.platform_left, self.last_mouse_position_left)
+
+        if self.platform_right:
+            self.physics_engine.set_position(self.platform_right, self.last_mouse_position_right)
 
         # Move items in the physics engine
         self.physics_engine.step()
