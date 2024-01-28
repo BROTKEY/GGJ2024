@@ -14,6 +14,7 @@ from ggj2024.HandReceiver import HandReceiver
 from ggj2024.config import *
 from ggj2024.utils import normalize_vector, rotate90_cw, rotate90_ccw
 from ggj2024.sprites import ParticleSprite, PlayerSprite, PhysicsSprite, ControllablePlatformSprite, DummyBoxSprite
+from ggj2024.itemspawner import ItemSpawner
 
 
 class LEVEL(Enum):
@@ -49,6 +50,8 @@ class GameWindow(arcade.Window):
         self.spawned_item_list: Optional[arcade.SpriteList] = None
 
         self.spawnable_assets: list[str] = []
+
+        self.entities: list = []
 
         # Track the current state of what key is pressed
         self.a_pressed: bool = False
@@ -92,6 +95,7 @@ class GameWindow(arcade.Window):
 
     def setup(self):
         """ Set up everything with the game """
+        self.spawnable_assets = [str(fn) for fn in Path('assets/AFOPNGS/').glob('*.png')]
 
         # Create the sprite lists
         self.player_list = arcade.SpriteList()
@@ -100,7 +104,7 @@ class GameWindow(arcade.Window):
         self.spawned_item_list = arcade.SpriteList()
 
         # Map name
-        map_name = "resources/tiled_maps/Level2.json"
+        map_name = "resources/tiled_maps/SpawnerTest.json"
         #map_name = "resources/tiled_maps/gravity_test.json"
 
         # Load in TileMap
@@ -120,7 +124,19 @@ class GameWindow(arcade.Window):
         self.background_list = tile_map.sprite_lists["Background"]
         self.soft_list = tile_map.sprite_lists.get('Soft') or arcade.SpriteList()
         self.finish_list = tile_map.sprite_lists.get('Finish') or arcade.SpriteList()
-
+        entities = tile_map.sprite_lists.get('Entities') or []
+        
+        for sprite in entities:
+            print(sprite.properties)
+            match sprite.properties.get('type'):
+                case 'object_spawner':
+                    entity = ItemSpawner(sprite, self.item_spawned, self.spawnable_assets)
+                case _:
+                    print(f"ERROR: unknown entity type (Class): {sprite.properties.get('class')}")
+                    continue
+            self.entities.append(entity)
+                
+                
         # player-controlled platforms
         size = 64
         mass = 1.0
@@ -135,8 +151,6 @@ class GameWindow(arcade.Window):
             shape.friction = 0.9
             sprite = ControllablePlatformSprite(shape, ":resources:images/tiles/boxCrate_double.png", width=2*size, height=size)
             self.platform_list.append(sprite)
-
-        self.spawnable_assets = [str(fn) for fn in Path('assets/AFOPNGS/').glob('*.png')]
 
         # Create player sprite
         self.player_sprite = PlayerSprite(hit_box_algorithm="Detailed")
@@ -385,16 +399,19 @@ class GameWindow(arcade.Window):
         sprite.height = height
         sprite.center_x = center_x
         sprite.center_y = center_y
-        while len(self.spawned_item_list) >= MAX_SPAWNED_ITEMS:
-            removed = self.spawned_item_list.pop(0)
-            self.physics_engine.remove_sprite(removed)
-        self.spawned_item_list.append(sprite)
-        self.physics_engine.add_sprite(sprite, mass, friction, elasticity, collision_type='item')
+        self.item_spawned(sprite, mass, friction, elasticity)
         return sprite
 
     def spawn_random_item(self, center_x, center_y, width=64, height=64, mass=5.0, friction=0.2, elasticity=None):
         return self.spawn_item(np.random.choice(self.spawnable_assets),
                                center_x, center_y, width, height, mass, friction, elasticity)
+    
+    def item_spawned(self, sprite, mass=5.0, friction=0.2, elasticity=None):
+        while len(self.spawned_item_list) >= MAX_SPAWNED_ITEMS:
+            removed = self.spawned_item_list.pop(0)
+            self.physics_engine.remove_sprite(removed)
+        self.spawned_item_list.append(sprite)
+        self.physics_engine.add_sprite(sprite, mass, friction, elasticity, collision_type='item')
         
 
     # TODO: combinations of direction buttons could be done better, this is just for testing
@@ -623,6 +640,8 @@ class GameWindow(arcade.Window):
 
         self.update_gravity(hand_gesture_update=True)
         self.update_platforms()
+        for entity in self.entities:
+            entity.update()
 
         # Move items in the physics engine
         self.physics_engine.step()
@@ -661,4 +680,6 @@ class GameWindow(arcade.Window):
         self.spawned_item_list.draw()
         self.player_list.draw()
         self.soft_list.draw()
+        for entity in self.entities:
+            entity.draw()
         self.particle_list.draw()
