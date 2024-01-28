@@ -61,6 +61,13 @@ class PlayerSprite(arcade.Sprite):
     def pymunk_moved(self, physics_engine, dx, dy, d_angle):
         """ Handle being moved by the pymunk engine """
         # Figure out if we need to face left or right
+        phys_obj = physics_engine.get_physics_object(self)
+        orientation = phys_obj.shape.body.angle
+        
+        direction = pymunk.Vec2d(dx, dy)
+        direction_rot = direction.rotated(np.pi - orientation)
+        dx, dy = -direction_rot
+
         if dx < -DEAD_ZONE and self.character_face_direction == RIGHT_FACING:
             self.character_face_direction = LEFT_FACING
         elif dx > DEAD_ZONE and self.character_face_direction == LEFT_FACING:
