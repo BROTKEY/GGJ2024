@@ -19,7 +19,7 @@ SCREEN_WIDTH = SPRITE_SIZE * SCREEN_GRID_WIDTH
 SCREEN_HEIGHT = SPRITE_SIZE * SCREEN_GRID_HEIGHT
 
 # How fast the camera scrolls
-CAMERA_SPEED = 1e-4
+CAMERA_SPEED = 1e-3
 
 # --- Physics forces. Higher number, faster accelerating.
 
@@ -72,3 +72,5 @@ FORCES_RELATIVE_TO_PLAYER = True
 
 # Defines how many (additionally spawned) diversifier items can exist at one time
 MAX_SPAWNED_ITEMS = 10
+
+FIST_THRESHOLD = 2.5
