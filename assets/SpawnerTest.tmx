@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.8" tiledversion="1.8.0" orientation="orthogonal" renderorder="right-down" width="48" height="48" tilewidth="128" tileheight="128" infinite="0" nextlayerid="11" nextobjectid="5">
+<map version="1.10" tiledversion="1.10.2" orientation="orthogonal" renderorder="right-down" width="48" height="48" tilewidth="128" tileheight="128" infinite="0" nextlayerid="12" nextobjectid="2">
  <editorsettings>
-  <export target="../resources/tiled_maps/Level2.json" format="json"/>
+  <export target="../resources/tiled_maps/SpawnerTest.json" format="json"/>
  </editorsettings>
  <tileset firstgid="1" source="AllForOne.tsx"/>
  <tileset firstgid="106" source="General.tsx"/>
@@ -57,6 +57,9 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
  </layer>
+ <objectgroup id="10" name="Entities">
+  <object id="1" type="object_spawner" gid="69" x="2050" y="5120" width="128" height="128"/>
+ </objectgroup>
  <layer id="7" name="Soft" width="48" height="48">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -109,10 +112,6 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
  </layer>
- <objectgroup id="10" name="Entities">
-  <object id="1" type="object_spawner" gid="69" x="316.048" y="704.013" width="128" height="128"/>
-  <object id="3" type="object_spawner" gid="69" x="4336.98" y="1349.2" width="128" height="128"/>
- </objectgroup>
  <layer id="8" name="Start" width="48" height="48">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
