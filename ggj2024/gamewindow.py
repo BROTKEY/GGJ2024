@@ -14,7 +14,8 @@ from ggj2024.HandReceiver import HandReceiver
 from ggj2024.config import *
 from ggj2024.utils import normalize_vector, rotate90_cw, rotate90_ccw
 from ggj2024.sprites import ParticleSprite, PlayerSprite, PhysicsSprite, ControllablePlatformSprite, DummyBoxSprite
-from ggj2024.itemspawner import ItemSpawner
+from ggj2024.itemspawner import ItemSpawner, Entity
+from ggj2024.region import Region
 
 
 class MECHANICS(Enum):
@@ -74,7 +75,8 @@ class GameWindow(arcade.Window):
 
         self.spawnable_assets: list[str] = []
 
-        self.entities: list = []
+        self.regions: list[Region] = []
+        self.entities: list[Entity] = []
 
         # Track the current state of what key is pressed
         self.a_pressed: bool = False
@@ -180,6 +182,7 @@ class GameWindow(arcade.Window):
         tile_map = LEVELS[self.current_level]['tilemap']
         self.map_bounds_x = tile_map.width * tile_map.tile_width * tile_map.scaling
         self.map_bounds_y = tile_map.height * tile_map.tile_height * tile_map.scaling
+        self.map_bounds_unscaled = [tile_map.width * tile_map.tile_width, tile_map.height * tile_map.tile_height]
 
         color1 = (255,255,255)
         color2 = (87, 207, 255)
@@ -202,18 +205,8 @@ class GameWindow(arcade.Window):
         self.background_list = tile_map.sprite_lists["Background"]
         self.soft_list = tile_map.sprite_lists.get('Soft') or arcade.SpriteList()
         self.finish_list = tile_map.sprite_lists.get('Finish') or arcade.SpriteList()
-        entities = tile_map.sprite_lists.get('Entities') or []
-
-        self.entities = []
-        for sprite in entities:
-            print(sprite.properties)
-            match sprite.properties.get('type'):
-                case 'object_spawner':
-                    entity = ItemSpawner(sprite, self.item_spawned, self.spawnable_assets)
-                case _:
-                    print(f"ERROR: unknown entity type (Class): {sprite.properties.get('class')}")
-                    continue
-            self.entities.append(entity)
+        map_entities = tile_map.sprite_lists.get('Entities') or []
+        map_objects = tile_map.object_lists.get('Regions') or []
 
         # Get player start from level
         start_sprite_list = tile_map.sprite_lists.get('Start')
@@ -229,6 +222,38 @@ class GameWindow(arcade.Window):
             self.start_center = ((tile_map.width * SPRITE_SIZE) / 2, (tile_map.height * SPRITE_SIZE) / 2)
             self.player_sprite.center_x, self.player_sprite.center_y = self.start_center
 
+        # Load objectes and entities
+        regions = dict[int, Region]()
+        for obj in (map_objects):
+            print(f'Loading object (type={obj.type})')
+            match obj.type:
+                case 'region':
+                    shape = [(x*tile_map.scaling, self.map_bounds_y + y*tile_map.scaling) for x, y in obj.shape]
+                    region = Region(shape, self.player_sprite)
+                    regions[obj.properties['id']] = region
+                    self.regions.append(region)
+                case _:
+                    print(f"ERROR: unknown object type (=Class): {obj.type}")
+                    continue
+
+        for sprite in map_entities:
+            t = sprite.properties.get('type')
+            print(f'Loading entity (type={t})')
+            match t:
+                case 'object_spawner':
+                    region_id = sprite.properties.get('active_region')
+                    if region_id is None:
+                        region = None
+                    else:
+                        region = regions.get(region_id)
+                        if region is None:
+                            print(f'WARNING: ObjectSpawner had an active region defined (id={region_id}) but it was not found')
+                    interval = sprite.properties.get('interval') or 1.0
+                    entity = ItemSpawner(sprite, self.item_spawned, self.spawnable_assets, max_scale=5, active_region=region, spawn_interval=interval)
+                case _:
+                    print(f"ERROR: unknown entity type (=Class): {sprite.properties.get('type')}")
+                    continue
+            self.entities.append(entity)
         # Get finish
         if not self.finish_list:
             print('WARNING: No finish was defined, this level is unbeatable!')
@@ -300,7 +325,7 @@ class GameWindow(arcade.Window):
         def handle_player_wall_collision(player_sprite: PlayerSprite, wall_sprite: arcade.sprite, arbiter: pymunk.Arbiter, space, data):
             impulse: pymunk.Vec2d = arbiter.total_impulse
             if impulse.length > 500:
-                print('wall collision, impulse =', impulse.length)
+                # print('wall collision, impulse =', impulse.length)
                 hit_sound = random.choice(self.audio_hits)
                 arcade.play_sound(hit_sound, 1.0, -1, False)
             if impulse.length > PLAYER_DEATH_IMPULSE:
@@ -310,7 +335,7 @@ class GameWindow(arcade.Window):
         def handle_player_item_collision(player_sprite: PlayerSprite, item_sprite: arcade.Sprite, arbiter: pymunk.Arbiter, space, data):
             impulse: pymunk.Vec2d = arbiter.total_impulse
             if impulse.length > 500:
-                print('object collision, impulse =', impulse.length)
+                # print('object collision, impulse =', impulse.length)
                 hit_sound = random.choice(self.audio_hits)
                 arcade.play_sound(hit_sound, 1.0, -1, False)
             if impulse.length > PLAYER_DEATH_IMPULSE:
