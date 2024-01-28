@@ -456,9 +456,11 @@ class GameWindow(arcade.Window):
         else:
             # update platform position based on mouse input
             if self.platform_left:
-                self.physics_engine.set_position(self.platform_left, self.last_mouse_position_left)
+                pos = tuple(self.camera.position + pymunk.Vec2d(self.last_mouse_position_left[0], self.last_mouse_position_left[1]))
+                self.physics_engine.set_position(self.platform_left, pos)
             if self.platform_right:
-                self.physics_engine.set_position(self.platform_right, self.last_mouse_position_right)
+                pos = tuple(self.camera.position + pymunk.Vec2d(self.last_mouse_position_right[0], self.last_mouse_position_right[1]))
+                self.physics_engine.set_position(self.platform_right, pos)
 
     def on_key_press(self, key, modifiers):
         """Called whenever a key is pressed. """
