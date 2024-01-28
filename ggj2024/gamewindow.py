@@ -498,6 +498,9 @@ class GameWindow(arcade.Window):
                 self.enter_pressed = True
                 next_index = (list(LEVEL).index(self.current_level) + 1) % len(LEVEL)
                 self.current_level = list(LEVEL)[next_index]
+
+            case arcade.key.DELETE:
+                self.kill_player('Keyboard')
         if key == arcade.key.LEFT:
             self.left_pressed = True
             self.update_gravity()
