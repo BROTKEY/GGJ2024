@@ -130,7 +130,7 @@ class GameWindow(arcade.Window):
             print(sprite.properties)
             match sprite.properties.get('type'):
                 case 'object_spawner':
-                    entity = ItemSpawner(sprite, self.item_spawned, self.spawnable_assets)
+                    entity = ItemSpawner(sprite, self.item_spawned, self.spawnable_assets, max_scale=5)
                 case _:
                     print(f"ERROR: unknown entity type (Class): {sprite.properties.get('class')}")
                     continue
