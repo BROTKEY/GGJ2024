@@ -181,7 +181,18 @@ class GameWindow(arcade.Window):
         self.item_list = tile_map.sprite_lists["Dynamic Items"]
         self.background_list = tile_map.sprite_lists["Background"]
         self.soft_list = tile_map.sprite_lists.get('Soft') or arcade.SpriteList()
-        self.finish_list = tile_map.sprite_lists.get('Finish') or arcade.SpriteList()
+        self.finish_list = tile_map.sprite_lists.get('Finish') or arcade.SpriteList()    
+        entities = tile_map.sprite_lists.get('Entities') or []
+        
+        for sprite in entities:
+            print(sprite.properties)
+            match sprite.properties.get('type'):
+                case 'object_spawner':
+                    entity = ItemSpawner(sprite, self.item_spawned, self.spawnable_assets)
+                case _:
+                    print(f"ERROR: unknown entity type (Class): {sprite.properties.get('class')}")
+                    continue
+            self.entities.append(entity)
 
         # Get player start from level
         start_sprite_list = tile_map.sprite_lists.get('Start')
