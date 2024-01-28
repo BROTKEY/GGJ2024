@@ -120,7 +120,9 @@ class GameWindow(arcade.Window):
 
         self.available_level_tilemaps = {
             LEVEL.PLATFORMS: arcade.load_tilemap("resources/tiled_maps/Level1.json", SPRITE_SCALING_TILES),
-            LEVEL.GRAVITY: arcade.load_tilemap("resources/tiled_maps/Level2.json", SPRITE_SCALING_TILES)
+            LEVEL.GRAVITY: arcade.load_tilemap("resources/tiled_maps/Level2.json", SPRITE_SCALING_TILES),
+            LEVEL.PLATFORMS: arcade.load_tilemap("resources/tiled_maps/Level3.json", SPRITE_SCALING_TILES),
+            LEVEL.GRAVITY: arcade.load_tilemap("resources/tiled_maps/PitOfDoom.json", SPRITE_SCALING_TILES),
         }
 
         # --- Pymunk Physics Engine Setup ---
