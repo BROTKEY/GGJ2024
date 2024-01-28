@@ -129,6 +129,9 @@ class GameWindow(arcade.Window):
         self.player_list = arcade.SpriteList()
         self.platform_list = arcade.SpriteList()
 
+        self.mark_player_dead = None
+
+
         # Used for dragging shapes around with the mouse
         self.last_mouse_position = 0, 0
         self.last_mouse_position_left = 0, 0
@@ -327,23 +330,29 @@ class GameWindow(arcade.Window):
         # Collisions
         def handle_player_wall_collision(player_sprite: PlayerSprite, wall_sprite: arcade.sprite, arbiter: pymunk.Arbiter, space, data):
             impulse: pymunk.Vec2d = arbiter.total_impulse
+            if self.mark_player_dead:
+                return False
             if impulse.length > 500:
                 # print('wall collision, impulse =', impulse.length)
                 hit_sound = random.choice(self.audio_hits)
                 arcade.play_sound(hit_sound, 1.0, -1, False)
             if impulse.length > PLAYER_DEATH_IMPULSE:
-                print(f'died from item (impulse={impulse.length})')
-                self.kill_player('Wall collision')
+                print(f'died from wall (impulse={impulse.length})')
+                self.mark_player_dead = 'Wall'
+            return True
 
         def handle_player_item_collision(player_sprite: PlayerSprite, item_sprite: arcade.Sprite, arbiter: pymunk.Arbiter, space, data):
             impulse: pymunk.Vec2d = arbiter.total_impulse
+            if self.mark_player_dead:
+                return False
             if impulse.length > 500:
                 # print('object collision, impulse =', impulse.length)
                 hit_sound = random.choice(self.audio_hits)
                 arcade.play_sound(hit_sound, 1.0, -1, False)
             if impulse.length > PLAYER_DEATH_IMPULSE:
-                print(f'hit the ground too hard (impulse={impulse.length})')
-                self.kill_player('Object collision')
+                print(f'died from item (impulse={impulse.length})')
+                self.mark_player_dead = 'Item'
+            return True
 
         def handle_player_finish_collision(player: PlayerSprite, finish: arcade.Sprite, arbiter: pymunk.Arbiter, space, data):
             # TODO level done
@@ -467,9 +476,12 @@ class GameWindow(arcade.Window):
             self.physics_engine.add_sprite(particle, particle_mass, radius=particle_size, collision_type='particle')
             self.physics_engine.apply_impulse(particle, tuple((np.random.rand(2)-.5)*2000))
 
-        # respawn
-        self.player_sprite.position = self.start_center
-        self.physics_engine.set_position(self.player_sprite, self.start_center)
+        if reason in ['out_of_bounds', 'keyboard']:
+            self.physics_engine.set_position(self.player_sprite,
+                                             self.start_center)
+
+        print("TODO respawn")
+        self.mark_player_dead = None
 
     def spawn_item(self, filename, center_x, center_y, width, height, mass=5.0, friction=0.2, elasticity=None):
         """Spawn one of the diversifier items into the scene"""
@@ -619,7 +631,7 @@ class GameWindow(arcade.Window):
                 self.next_level()
 
             case arcade.key.DELETE:
-                self.kill_player('Keyboard')
+                self.mark_player_dead = 'keyboard'
         if key == arcade.key.LEFT:
             self.left_pressed = True
             self.update_gravity()
@@ -703,6 +715,8 @@ class GameWindow(arcade.Window):
 
     def on_update(self, delta_time):
         """ Movement and game logic """
+        if self.mark_player_dead:
+            self.kill_player(self.mark_player_dead)
 
         # Rotate player to gravity
         player_object = self.physics_engine.get_physics_object(self.player_sprite)
@@ -752,19 +766,20 @@ class GameWindow(arcade.Window):
         for entity in self.entities:
             entity.update()
 
-        # Move items in the physics engine
-        self.physics_engine.step()
-
         x_inbounds = (0 <= self.player_sprite.center_x <= self.map_bounds_x)
         y_inbounds = (0 <= self.player_sprite.center_y <= self.map_bounds_y)
         if not (x_inbounds and y_inbounds):
-            self.kill_player('out of bounds')
+            self.mark_player_dead = 'out_of_bounds'
+
+        # Move items in the physics engine
+        self.physics_engine.step()
 
         if self.level_transition:
             self.next_level()
             self.level_transition = False
 
         self.scroll_to_player()
+
 
     def scroll_to_player(self):
         """
