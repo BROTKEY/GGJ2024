@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<tileset version="1.8" tiledversion="1.8.0" name="General" tilewidth="256" tileheight="256" tilecount="26" columns="0">
+<tileset version="1.8" tiledversion="1.8.0" name="General" tilewidth="256" tileheight="256" tilecount="27" columns="0">
  <grid orientation="orthogonal" width="1" height="1"/>
  <tile id="20">
   <image width="128" height="128" source="TILES/fence.png"/>
@@ -99,5 +99,8 @@
  </tile>
  <tile id="74">
   <image width="256" height="128" source="TILES/PlayerControlledPlatform.png"/>
+ </tile>
+ <tile id="75">
+  <image width="128" height="128" source="TILES/Arrow.png"/>
  </tile>
 </tileset>

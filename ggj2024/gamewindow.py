@@ -466,20 +466,17 @@ class GameWindow(arcade.Window):
         print('Player died:', reason)
         # Add 25 particles
         x, y = self.player_sprite.position
-        particle_size_min = 1
-        particle_size_variation = 2
         particle_mass = 0.5
-        for i in range(25):
-            particle_size = np.random.rand()*particle_size_variation + particle_size_min
+        for i in range(BLOOD_PER_SPLATTER):
+            particle_size = np.random.rand()*BLOOD_PARTICLE_SIZE_RANGE + BLOOD_PARTICLE_SIZE_MIN
             particle = ParticleSprite(x, y, particle_size, particle_mass)
             self.particle_list.append(particle)
             self.physics_engine.add_sprite(particle, particle_mass, radius=particle_size, collision_type='particle')
-            self.physics_engine.apply_impulse(particle, tuple((np.random.rand(2)-.5)*2000))
+            self.physics_engine.apply_impulse(particle, tuple((np.random.rand(2)-.5)*BLOOD_IMPULSE))
 
         self.physics_engine.set_position(self.player_sprite,
                                              self.start_center)
 
-        print("TODO respawn")
         self.mark_player_dead = None
 
     def spawn_item(self, filename, center_x, center_y, width, height, mass=5.0, friction=0.2, elasticity=None):
@@ -766,6 +763,10 @@ class GameWindow(arcade.Window):
         for entity in self.entities:
             entity.update()
 
+        # Move items in the physics engine
+        for _ in range(0,STEPS_PER_FRAME):
+            self.physics_engine.step(delta_time=1/(60*STEPS_PER_FRAME))
+
         x_inbounds = (0 <= self.player_sprite.center_x <= self.map_bounds_x)
         y_inbounds = (0 <= self.player_sprite.center_y <= self.map_bounds_y)
         if not (x_inbounds and y_inbounds):
@@ -779,7 +780,6 @@ class GameWindow(arcade.Window):
             self.level_transition = False
 
         self.scroll_to_player()
-
 
     def scroll_to_player(self):
         """
