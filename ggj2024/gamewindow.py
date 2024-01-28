@@ -317,7 +317,7 @@ class GameWindow(arcade.Window):
         self.physics_engine.add_sprite_list(
             self.platform_list,
             friction=DYNAMIC_ITEM_FRICTION,
-            collision_type="item",
+            collision_type="platform",
             body_type=arcade.PymunkPhysicsEngine.KINEMATIC
         )
 
@@ -349,9 +349,22 @@ class GameWindow(arcade.Window):
             self.level_transition = True
             return False
 
+        def handle_platform_collision(player: PlayerSprite, platform: arcade.Sprite, arbiter: pymunk.Arbiter, space, data):
+            if platform == self.platform_left and self.platform_left_collision:
+                print("platform collision")
+                return True
+            if platform == self.platform_right and self.platform_right_collision:
+                print("platform collision")
+                return True
+            return False
+
         self.physics_engine.add_collision_handler('player', 'wall', post_handler=handle_player_wall_collision)
         self.physics_engine.add_collision_handler('player', 'item', post_handler=handle_player_item_collision)
         self.physics_engine.add_collision_handler('player', 'finish', begin_handler=handle_player_finish_collision)
+
+        self.physics_engine.add_collision_handler('player', 'platform', begin_handler=handle_platform_collision)
+        self.physics_engine.add_collision_handler('item', 'platform', begin_handler=handle_platform_collision)
+
 
         def handle_particle_x_collision(particle: ParticleSprite, other: arcade.Sprite, arbiter: pymunk.Arbiter, space, data):
             # HACK: store old width and height, reset them after changing the texture
@@ -396,7 +409,6 @@ class GameWindow(arcade.Window):
             texture = arcade.Texture(tex_name, image)
             other.texture = texture
             other.width, other.height = old_w, old_h
-            
 
         self.physics_engine.add_collision_handler('particle', 'wall', post_handler=handle_particle_x_collision)
         self.physics_engine.add_collision_handler('particle', 'item', post_handler=handle_particle_x_collision)
@@ -524,23 +536,21 @@ class GameWindow(arcade.Window):
             return
 
         if self.leap_motion:
-
-            if self.hands.right_hand.grab_angle > FIST_THRESHOLD:
-                print("fix right platform position")
-
             # update platform positions based on second player input
             if self.platform_left:
                 if self.hands.left_hand.grab_angle > FIST_THRESHOLD:
-                    print("fix left platform position")
+                    self.platform_left_collision = True
                 else:
+                    self.platform_left_collision = False
                     lx = self.hands.left_hand.x
                     ly = self.hands.left_hand.y
                     pos = (self.camera.position.x + self.width/2 + lx, self.camera.position.y + ly)
                     self.physics_engine.set_position(self.platform_left, pos)
             if self.platform_right:
                 if self.hands.right_hand.grab_angle > FIST_THRESHOLD:
-                    print("fix right platform position")
+                    self.platform_right_collision = True
                 else:
+                    self.platform_right_collision = False
                     rx = self.hands.right_hand.x
                     ry = self.hands.right_hand.y
                     pos = (self.camera.position.x + self.width/2 + rx, self.camera.position.y + ry)
