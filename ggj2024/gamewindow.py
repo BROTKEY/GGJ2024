@@ -278,7 +278,6 @@ class GameWindow(arcade.Window):
             old_w, old_h = other.width, other.height
             self.physics_engine.remove_sprite(particle)
             self.particle_list.remove(particle)
-            # contacts: pymunk.ContactPointSet = arbiter.contact_point_set
             # position yields center of object, we need corner
             other_pos = pymunk.Vec2d(
                 other.position[0] - other.width/2,
