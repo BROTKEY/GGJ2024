@@ -392,7 +392,9 @@ class GameWindow(arcade.Window):
             # contact_rel *= scale
             # Make it apply to a little bit smaller region so that particles will be visible
             x = contact_rel.x * scale_x
-            y = image.height - contact_rel.y * scale_y 
+            y = image.height - contact_rel.y * scale_y
+            x -= splat_size/2
+            y -= splat_size/2
             x = 0.95 * x
             y = 0.95 * y
             x += 0.05 * image.width
