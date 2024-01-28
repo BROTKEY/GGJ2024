@@ -28,21 +28,25 @@ LEVELS = {
     1: {
         'tilemap': arcade.load_tilemap("resources/tiled_maps/Level1.json",
                                          SPRITE_SCALING_TILES),
+        'theme': arcade.load_sound('resources/sound/theme_calm.mp3', False),
         'mechanics': MECHANICS.PLATFORMS
     },
     2: {
         'tilemap': arcade.load_tilemap("resources/tiled_maps/Level2.json",
                                        SPRITE_SCALING_TILES),
+        'theme': arcade.load_sound('resources/sound/theme_fast.mp3', False),
         'mechanics': MECHANICS.GRAVITY
     },
     3: {
         'tilemap': arcade.load_tilemap("resources/tiled_maps/Level3.json",
                                        SPRITE_SCALING_TILES),
+        'theme': arcade.load_sound('resources/sound/theme.mp3', False),
         'mechanics': MECHANICS.PLATFORMS
     },
     4: {
         'tilemap': arcade.load_tilemap("resources/tiled_maps/PitOfDoom.json",
                                        SPRITE_SCALING_TILES),
+        'theme': arcade.load_sound('resources/sound/theme_fast.mp3', False),
         'mechanics': MECHANICS.GRAVITY
     },
 }
@@ -110,7 +114,6 @@ class GameWindow(arcade.Window):
         self.level_transition = False
 
         # Loading the audio file
-        self.audio_theme = arcade.load_sound('resources/sound/theme.mp3', False)
         hit_sound_files = list(pathlib.Path('resources/sound/animal').glob('*.wav')) + list(pathlib.Path('resources/sound/kenney_impact-sounds/Audio/').glob('*.ogg'))
         max_hitsounds = min(10, len(hit_sound_files))
         self.audio_hits = [arcade.load_sound(file, False) for file in hit_sound_files[:max_hitsounds]]
@@ -119,8 +122,7 @@ class GameWindow(arcade.Window):
         self.start_center: tuple[int, int] = None
         self.finish_tiles: arcade.Sprite = None
 
-        # Playing the audio
-        arcade.play_sound(self.audio_theme, 1.0, -1, True)
+        self.active_theme = None
 
     def setup(self):
         """ Set up everything with the game """
@@ -185,6 +187,11 @@ class GameWindow(arcade.Window):
 
     def load_level(self, level):
         self.current_level = level
+
+        # Playing the audio
+        if self.active_theme:
+            arcade.stop_sound(self.active_theme)
+        self.active_theme = arcade.play_sound(LEVELS[self.current_level]['theme'], 1.0, -1, True)
 
         tile_map = LEVELS[self.current_level]['tilemap']
         self.map_bounds_x = tile_map.width * tile_map.tile_width * tile_map.scaling
