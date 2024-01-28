@@ -97,7 +97,6 @@ class GameWindow(arcade.Window):
         self.up_pressed: bool = False
         self.down_pressed: bool = False
 
-        self.main_gravity = np.array([0, -GRAVITY], dtype='float')
         self.hands = HandReceiver()#
 
         self.splatter_texture_dict: dict[arcade.Sprite, Image.Image] = dict()
@@ -187,6 +186,8 @@ class GameWindow(arcade.Window):
 
     def load_level(self, level):
         self.current_level = level
+
+        self.main_gravity = np.array([0, -GRAVITY], dtype='float')
 
         # Playing the audio
         if self.active_theme:
