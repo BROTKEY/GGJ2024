@@ -474,7 +474,6 @@ class GameWindow(arcade.Window):
                 new_grav = (v[1], -v[0])
                 new_grav = normalize_vector(new_grav) * GRAVITY
 
-                FIST_THRESHOLD = 2.5
                 fists_shown = self.hands.left_hand.grab_angle > FIST_THRESHOLD and self.hands.right_hand.grab_angle > FIST_THRESHOLD
                 if fists_shown:
                     new_grav = -new_grav
@@ -500,17 +499,27 @@ class GameWindow(arcade.Window):
             return
 
         if self.leap_motion:
+
+            if self.hands.right_hand.grab_angle > FIST_THRESHOLD:
+                print("fix right platform position")
+
             # update platform positions based on second player input
             if self.platform_left:
-                lx = self.hands.left_hand.x
-                ly = self.hands.left_hand.y
-                pos = (self.camera.position.x + self.width/2 + lx, self.camera.position.y + ly)
-                self.physics_engine.set_position(self.platform_left, pos)
+                if self.hands.left_hand.grab_angle > FIST_THRESHOLD:
+                    print("fix left platform position")
+                else:
+                    lx = self.hands.left_hand.x
+                    ly = self.hands.left_hand.y
+                    pos = (self.camera.position.x + self.width/2 + lx, self.camera.position.y + ly)
+                    self.physics_engine.set_position(self.platform_left, pos)
             if self.platform_right:
-                rx = self.hands.right_hand.x
-                ry = self.hands.right_hand.y
-                pos = (self.camera.position.x + self.width/2 + rx, self.camera.position.y + ry)
-                self.physics_engine.set_position(self.platform_right, pos)
+                if self.hands.right_hand.grab_angle > FIST_THRESHOLD:
+                    print("fix right platform position")
+                else:
+                    rx = self.hands.right_hand.x
+                    ry = self.hands.right_hand.y
+                    pos = (self.camera.position.x + self.width/2 + rx, self.camera.position.y + ry)
+                    self.physics_engine.set_position(self.platform_right, pos)
         else:
             # update platform position based on mouse input
             if self.platform_left:
