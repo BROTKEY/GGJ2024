@@ -14,7 +14,8 @@ from ggj2024.HandReceiver import HandReceiver
 from ggj2024.config import *
 from ggj2024.utils import normalize_vector, rotate90_cw, rotate90_ccw
 from ggj2024.sprites import ParticleSprite, PlayerSprite, PhysicsSprite, ControllablePlatformSprite, DummyBoxSprite
-from ggj2024.itemspawner import ItemSpawner
+from ggj2024.itemspawner import ItemSpawner, Entity
+from ggj2024.region import Region
 
 
 class LEVEL(Enum):
@@ -51,7 +52,8 @@ class GameWindow(arcade.Window):
 
         self.spawnable_assets: list[str] = []
 
-        self.entities: list = []
+        self.regions: list[Region] = []
+        self.entities: list[Entity] = []
 
         # Track the current state of what key is pressed
         self.a_pressed: bool = False
@@ -112,6 +114,7 @@ class GameWindow(arcade.Window):
 
         self.map_bounds_x = tile_map.width * tile_map.tile_width * tile_map.scaling
         self.map_bounds_y = tile_map.height * tile_map.tile_height * tile_map.scaling
+        self.map_bounds_unscaled = [tile_map.width * tile_map.tile_width, tile_map.height * tile_map.tile_height]
 
         self.width = int(min(self.width, self.map_bounds_x))
         self.height = int(min(self.height, self.map_bounds_y))
@@ -124,18 +127,8 @@ class GameWindow(arcade.Window):
         self.background_list = tile_map.sprite_lists["Background"]
         self.soft_list = tile_map.sprite_lists.get('Soft') or arcade.SpriteList()
         self.finish_list = tile_map.sprite_lists.get('Finish') or arcade.SpriteList()
-        entities = tile_map.sprite_lists.get('Entities') or []
-        
-        for sprite in entities:
-            print(sprite.properties)
-            match sprite.properties.get('type'):
-                case 'object_spawner':
-                    entity = ItemSpawner(sprite, self.item_spawned, self.spawnable_assets, max_scale=5)
-                case _:
-                    print(f"ERROR: unknown entity type (Class): {sprite.properties.get('class')}")
-                    continue
-            self.entities.append(entity)
-                
+        map_entities = tile_map.sprite_lists.get('Entities') or []
+        map_objects = tile_map.object_lists.get('Regions') or []
                 
         # player-controlled platforms
         size = 64
@@ -172,6 +165,37 @@ class GameWindow(arcade.Window):
         # Add to player sprite list
         self.player_list.append(self.player_sprite)
 
+        # Load objectes and entities
+        regions = dict[int, Region]()
+        for obj in (map_objects):
+            print(f'Loading object (type={obj.type})')
+            match obj.type:
+                case 'region':
+                    shape = [(x*tile_map.scaling, self.map_bounds_y + y*tile_map.scaling) for x, y in obj.shape]
+                    region = Region(shape, self.player_sprite)
+                    regions[obj.properties['id']] = region
+                    self.regions.append(region)
+                case _:
+                    print(f"ERROR: unknown object type (=Class): {obj.type}")
+                    continue
+        
+        for sprite in map_entities:
+            t = sprite.properties.get('type')
+            print(f'Loading entity (type={t})')
+            match t:
+                case 'object_spawner':
+                    region_id = sprite.properties.get('active_region')
+                    if region_id is None:
+                        shape = None
+                    else:
+                        shape = regions.get(region_id)
+                        if shape is None:
+                            print(f'WARNING: ObjectSpawner had an active region defined (id={region_id}) but it was not found')
+                    entity = ItemSpawner(sprite, self.item_spawned, self.spawnable_assets, max_scale=5, active_region=shape)
+                case _:
+                    print(f"ERROR: unknown entity type (=Class): {sprite.properties.get('type')}")
+                    continue
+            self.entities.append(entity)
         # Get finish
         if not self.finish_list:
             print('WARNING: No finish was defined, this level is unbeatable!')
@@ -594,6 +618,9 @@ class GameWindow(arcade.Window):
 
     def on_update(self, delta_time):
         """ Movement and game logic """
+
+        for region in self.regions:
+            print(region.is_player_inside())
 
         # Rotate player to gravity
         player_object = self.physics_engine.get_physics_object(self.player_sprite)

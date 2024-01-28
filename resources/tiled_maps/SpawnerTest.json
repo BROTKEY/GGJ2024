@@ -71,12 +71,46 @@
                  "height":128,
                  "id":1,
                  "name":"",
+                 "properties":[
+                        {
+                         "name":"active_region",
+                         "type":"int",
+                         "value":0
+                        }],
                  "rotation":0,
                  "type":"object_spawner",
                  "visible":true,
                  "width":128,
                  "x":2050,
                  "y":5120
+                }],
+         "opacity":1,
+         "type":"objectgroup",
+         "visible":true,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "draworder":"topdown",
+         "id":12,
+         "name":"Regions",
+         "objects":[
+                {
+                 "height":1300,
+                 "id":8,
+                 "name":"",
+                 "properties":[
+                        {
+                         "name":"id",
+                         "type":"int",
+                         "value":0
+                        }],
+                 "rotation":0,
+                 "type":"region",
+                 "visible":true,
+                 "width":1124,
+                 "x":1552,
+                 "y":4668
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -379,8 +413,8 @@
          "x":0,
          "y":0
         }],
- "nextlayerid":12,
- "nextobjectid":2,
+ "nextlayerid":13,
+ "nextobjectid":10,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.10.2",
