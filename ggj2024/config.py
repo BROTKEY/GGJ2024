@@ -54,7 +54,7 @@ PLAYER_MOVE_FORCE_IN_AIR = 5000
 # Strength of a jump
 PLAYER_JUMP_IMPULSE = 1500
 
-PLAYER_DEATH_IMPULSE = 5000
+PLAYER_DEATH_IMPULSE = 3500
 
 # Close enough to not-moving to have the animation go to idle.
 DEAD_ZONE = 0.1
