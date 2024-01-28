@@ -170,11 +170,14 @@ class GameWindow(arcade.Window):
             shape = pymunk.Poly.create_box(body, (size, 2*size))
             shape.elasticity = 0.2
             shape.friction = 0.9
-            sprite = ControllablePlatformSprite(shape, ":resources:images/tiles/boxCrate_double.png", width=2*size, height=size)
+            sprite = ControllablePlatformSprite(shape)#, ":resources:images/tiles/boxCrate_double.png", width=2*size, height=size)
             self.platform_list.append(sprite)
 
         self.platform_left = self.platform_list[0]
         self.platform_right = self.platform_list[1]
+
+        self.platform_left_collision = False
+        self.platform_right_collision = False
 
     def load_level(self, level):
         self.current_level = level
@@ -351,10 +354,8 @@ class GameWindow(arcade.Window):
 
         def handle_platform_collision(player: PlayerSprite, platform: arcade.Sprite, arbiter: pymunk.Arbiter, space, data):
             if platform == self.platform_left and self.platform_left_collision:
-                print("platform collision")
                 return True
             if platform == self.platform_right and self.platform_right_collision:
-                print("platform collision")
                 return True
             return False
 
@@ -539,19 +540,28 @@ class GameWindow(arcade.Window):
         if self.leap_motion:
             # update platform positions based on second player input
             if self.platform_left:
-                if self.hands.left_hand.grab_angle > FIST_THRESHOLD:
+                if not self.platform_left_collision and self.hands.left_hand.grab_angle > FIST_THRESHOLD:
                     self.platform_left_collision = True
-                else:
+                    self.platform_left.set_opaque(True)
+                if self.platform_left_collision and self.hands.left_hand.grab_angle < FIST_THRESHOLD:
                     self.platform_left_collision = False
+                    self.platform_left.set_opaque(False)
+
+                if not self.platform_left_collision:
                     lx = self.hands.left_hand.x
                     ly = self.hands.left_hand.y
                     pos = (self.camera.position.x + self.width/2 + lx, self.camera.position.y + ly)
                     self.physics_engine.set_position(self.platform_left, pos)
+
             if self.platform_right:
-                if self.hands.right_hand.grab_angle > FIST_THRESHOLD:
+                if not self.platform_right_collision and self.hands.right_hand.grab_angle > FIST_THRESHOLD:
                     self.platform_right_collision = True
-                else:
+                    self.platform_right.set_opaque(True)
+                if self.platform_right_collision and self.hands.right_hand.grab_angle < FIST_THRESHOLD:
                     self.platform_right_collision = False
+                    self.platform_right.set_opaque(False)
+
+                if not self.platform_right_collision:
                     rx = self.hands.right_hand.x
                     ry = self.hands.right_hand.y
                     pos = (self.camera.position.x + self.width/2 + rx, self.camera.position.y + ry)

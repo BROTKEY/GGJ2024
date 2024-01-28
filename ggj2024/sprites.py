@@ -103,10 +103,24 @@ class PhysicsSprite(arcade.Sprite):
 
 
 class ControllablePlatformSprite(PhysicsSprite):
-    def __init__(self, pymunk_shape, filename, width, height):
-        super().__init__(pymunk_shape, filename)
-        self.width = width
-        self.height = height
+    def __init__(self, pymunk_shape):
+        filename_solid = 'assets/TILES/PlayerControlledPlatform.png'
+        self.texture_solid = arcade.load_texture(
+            filename_solid
+        )
+        self.texture_opaque = arcade.load_texture(
+            'assets/TILES/PlayerControlledPlatformOpague.png'
+        )
+
+        super().__init__(pymunk_shape, filename_solid)
+        self.set_opaque(True)
+
+    def set_opaque(self, value):
+        if value:
+            self.texture = self.texture_solid
+        else:
+            self.texture = self.texture_opaque
+        self.opaque = value
 
 
 class DummyBoxSprite(PhysicsSprite):
