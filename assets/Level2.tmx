@@ -113,17 +113,17 @@
   <properties>
    <property name="id" type="int" value="0"/>
   </properties>
-  <object id="12" x="3312.67" y="3454.38" width="2763.51" height="2542.07">
+  <object id="12" type="region" x="3312.67" y="3454.38" width="2763.51" height="2542.07">
    <properties>
     <property name="id" type="int" value="0"/>
    </properties>
   </object>
-  <object id="14" x="85.6327" y="85.6327" width="3215.98" height="5918.17">
+  <object id="14" type="region" x="85.6327" y="85.6327" width="3215.98" height="5918.17">
    <properties>
     <property name="id" type="int" value="1"/>
    </properties>
   </object>
-  <object id="15" x="770.695" y="66.6032" width="5290.2" height="2664.13">
+  <object id="15" type="region" x="770.695" y="66.6032" width="5290.2" height="2664.13">
    <properties>
     <property name="id" type="int" value="2"/>
    </properties>

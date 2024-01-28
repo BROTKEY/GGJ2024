@@ -455,6 +455,7 @@ class GameWindow(arcade.Window):
             self.physics_engine.apply_impulse(particle, tuple((np.random.rand(2)-.5)*2000))
 
         # respawn
+        self.player_sprite.position = self.start_center
         self.physics_engine.set_position(self.player_sprite, self.start_center)
 
     def spawn_item(self, filename, center_x, center_y, width, height, mass=5.0, friction=0.2, elasticity=None):
