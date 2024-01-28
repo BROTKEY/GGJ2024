@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<tileset version="1.8" tiledversion="1.8.0" name="General" tilewidth="256" tileheight="256" tilecount="25" columns="0">
+<tileset version="1.8" tiledversion="1.8.0" name="General" tilewidth="256" tileheight="256" tilecount="26" columns="0">
  <grid orientation="orthogonal" width="1" height="1"/>
  <tile id="20">
   <image width="128" height="128" source="TILES/fence.png"/>
@@ -96,5 +96,8 @@
     <polygon points="0,0 -20,-29 -21,-54 3,-52 10,-82 27,-103 45,-87 56,-62 73,-64 82,-47 59,-2"/>
    </object>
   </objectgroup>
+ </tile>
+ <tile id="74">
+  <image width="256" height="128" source="TILES/PlayerControlledPlatform.png"/>
  </tile>
 </tileset>
