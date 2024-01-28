@@ -28,6 +28,74 @@
         }, 
         {
          "draworder":"topdown",
+         "id":11,
+         "name":"Regions",
+         "objects":[
+                {
+                 "height":2542.07263064659,
+                 "id":12,
+                 "name":"",
+                 "properties":[
+                        {
+                         "name":"id",
+                         "type":"int",
+                         "value":0
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":2763.50752878654,
+                 "x":3312.6660761736,
+                 "y":3454.38441098317
+                }, 
+                {
+                 "height":5918.17316841104,
+                 "id":14,
+                 "name":"",
+                 "properties":[
+                        {
+                         "name":"id",
+                         "type":"int",
+                         "value":1
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":3215.98477640343,
+                 "x":85.6327307326356,
+                 "y":85.6327307326356
+                }, 
+                {
+                 "height":2664.12940057088,
+                 "id":15,
+                 "name":"",
+                 "properties":[
+                        {
+                         "name":"id",
+                         "type":"int",
+                         "value":2
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":5290.19980970504,
+                 "x":770.69457659372,
+                 "y":66.6032350142721
+                }],
+         "opacity":1,
+         "properties":[
+                {
+                 "name":"id",
+                 "type":"int",
+                 "value":0
+                }],
+         "type":"objectgroup",
+         "visible":true,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "draworder":"topdown",
          "id":10,
          "name":"Entities",
          "objects":[
@@ -36,24 +104,54 @@
                  "height":128,
                  "id":1,
                  "name":"",
+                 "properties":[
+                        {
+                         "name":"active_region",
+                         "type":"int",
+                         "value":1
+                        }],
                  "rotation":0,
                  "type":"object_spawner",
                  "visible":true,
                  "width":128,
-                 "x":316.047505938242,
-                 "y":704.012668250198
+                 "x":316.048,
+                 "y":704.013
                 }, 
                 {
                  "gid":69,
                  "height":128,
                  "id":3,
                  "name":"",
+                 "properties":[
+                        {
+                         "name":"active_region",
+                         "type":"int",
+                         "value":2
+                        }],
                  "rotation":0,
                  "type":"object_spawner",
                  "visible":true,
                  "width":128,
-                 "x":4336.97799511003,
-                 "y":1349.20293398533
+                 "x":4336.98,
+                 "y":1349.2
+                }, 
+                {
+                 "gid":69,
+                 "height":128,
+                 "id":5,
+                 "name":"",
+                 "properties":[
+                        {
+                         "name":"active_region",
+                         "type":"int",
+                         "value":0
+                        }],
+                 "rotation":0,
+                 "type":"object_spawner",
+                 "visible":true,
+                 "width":128,
+                 "x":4664.75226039783,
+                 "y":3489.34538878843
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -109,8 +207,8 @@
          "x":0,
          "y":0
         }],
- "nextlayerid":11,
- "nextobjectid":5,
+ "nextlayerid":12,
+ "nextobjectid":20,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.0",
