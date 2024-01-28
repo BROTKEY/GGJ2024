@@ -3,6 +3,7 @@ import arcade
 from ggj2024.config import *
 import pymunk
 import numpy as np
+import time
 
 
 
@@ -140,7 +141,7 @@ class ParticleSprite(arcade.Sprite):
     PARTICLE_COUNT = 0
     COLOR_VARIATION = 50
 
-    def __init__(self, x, y, radius, mass=1):
+    def __init__(self, x, y, radius, mass=1, liftetime=BLOOD_LIFETIME):
         self.texture_name = f'particle_{ParticleSprite.PARTICLE_COUNT}'
         ParticleSprite.PARTICLE_COUNT += 1
         color_var = int(np.random.random() * ParticleSprite.COLOR_VARIATION)
@@ -154,3 +155,4 @@ class ParticleSprite(arcade.Sprite):
         self.radius = radius
         self.width = 2*radius
         self.height = 2*radius
+        self.killtime = time.time() + liftetime

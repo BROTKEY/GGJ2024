@@ -6,6 +6,7 @@ import pymunk
 import numpy as np
 from PIL import Image
 from pathlib import Path
+import time
 
 from typing import Optional
 from enum import Enum
@@ -401,7 +402,9 @@ class GameWindow(arcade.Window):
             # contact_rel *= scale
             # Make it apply to a little bit smaller region so that particles will be visible
             x = contact_rel.x * scale_x
-            y = image.height - contact_rel.y * scale_y 
+            y = image.height - contact_rel.y * scale_y
+            x -= splat_size/2
+            y -= splat_size/2
             x = 0.95 * x
             y = 0.95 * y
             x += 0.05 * image.width
@@ -757,6 +760,16 @@ class GameWindow(arcade.Window):
         else:
             # Player's feet are not moving. Therefore up the friction so we stop.
             self.physics_engine.set_friction(self.player_sprite, 1.0)
+
+        # Delete old blood
+        new_particle_list = arcade.SpriteList()
+        t = time.time()
+        for blood in self.particle_list:
+            if isinstance(blood, ParticleSprite) and t >= blood.killtime:
+                self.physics_engine.remove_sprite(blood)
+            else:
+                new_particle_list.append(blood)
+        self.particle_list = new_particle_list
 
         self.update_gravity(hand_gesture_update=True)
         self.update_platforms()
