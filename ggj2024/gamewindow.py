@@ -491,7 +491,8 @@ class GameWindow(arcade.Window):
             removed = self.spawned_item_list.pop(0)
             self.physics_engine.remove_sprite(removed)
         self.spawned_item_list.append(sprite)
-        self.physics_engine.add_sprite(sprite, mass, friction, elasticity, collision_type='item')
+        self.physics_engine.add_sprite(sprite, mass, friction, elasticity, collision_type='item',
+                                       max_velocity=ITEM_MAX_VELOCITY)
         
 
     # TODO: combinations of direction buttons could be done better, this is just for testing
