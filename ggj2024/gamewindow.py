@@ -16,9 +16,23 @@ from ggj2024.utils import normalize_vector, rotate90_cw, rotate90_ccw
 from ggj2024.sprites import ParticleSprite, PlayerSprite, PhysicsSprite, ControllablePlatformSprite, DummyBoxSprite
 
 
-class LEVEL(Enum):
+class MECHANICS(Enum):
     PLATFORMS = 1
     GRAVITY = 2
+
+
+LEVELS = {
+    1: {
+        'tilemap': arcade.load_tilemap("resources/tiled_maps/Level1.json",
+                                         SPRITE_SCALING_TILES),
+        'mechanics': MECHANICS.PLATFORMS
+    },
+    2: {
+        'tilemap': arcade.load_tilemap("resources/tiled_maps/Level2.json",
+                                       SPRITE_SCALING_TILES),
+        'mechanics': MECHANICS.GRAVITY
+    },
+}
 
 
 class GameWindow(arcade.Window):
@@ -73,7 +87,7 @@ class GameWindow(arcade.Window):
         # Set background color
         arcade.set_background_color(arcade.color.AMAZON)
 
-        self.current_level = list(LEVEL)[0]
+        self.current_level = 1
         self.respawn_player = False
         self.leap_motion = leap_motion
 
@@ -112,11 +126,6 @@ class GameWindow(arcade.Window):
         # Add to player sprite list
         self.player_list.append(self.player_sprite)
 
-        self.available_level_tilemaps = {
-            LEVEL.PLATFORMS: arcade.load_tilemap("resources/tiled_maps/Level1.json", SPRITE_SCALING_TILES),
-            LEVEL.GRAVITY: arcade.load_tilemap("resources/tiled_maps/Level2.json", SPRITE_SCALING_TILES)
-        }
-
         # --- Pymunk Physics Engine Setup ---
 
         # The default damping for every object controls the percent of velocity
@@ -130,7 +139,7 @@ class GameWindow(arcade.Window):
         # Set the gravity. (0, 0) is good for outer space and top-down.
         # gravity = (0, -GRAVITY)
 
-        self.load_level(LEVEL.PLATFORMS)
+        self.load_level(self.current_level)
 
     def setup_platforms(self):
         # player-controlled platforms
@@ -154,7 +163,7 @@ class GameWindow(arcade.Window):
     def load_level(self, level):
         self.current_level = level
 
-        tile_map = self.available_level_tilemaps[level]
+        tile_map = LEVELS[self.current_level]['tilemap']
         self.map_bounds_x = tile_map.width * tile_map.tile_width * tile_map.scaling
         self.map_bounds_y = tile_map.height * tile_map.tile_height * tile_map.scaling
 
@@ -408,7 +417,7 @@ class GameWindow(arcade.Window):
 
     # TODO: combinations of direction buttons could be done better, this is just for testing
     def update_gravity(self, hand_gesture_update=False):
-        if not self.current_level == LEVEL.GRAVITY:
+        if not LEVELS[self.current_level]['mechanics'] == MECHANICS.GRAVITY:
             return
 
         if hand_gesture_update:
@@ -447,7 +456,7 @@ class GameWindow(arcade.Window):
         self.main_gravity = new_grav
 
     def update_platforms(self):
-        if not self.current_level == LEVEL.PLATFORMS:
+        if not LEVELS[self.current_level]['mechanics'] == MECHANICS.PLATFORMS:
             return
 
         if self.leap_motion:
@@ -505,8 +514,9 @@ class GameWindow(arcade.Window):
 
             case arcade.key.ENTER:
                 self.enter_pressed = True
-                next_index = (list(LEVEL).index(self.current_level) + 1) % len(LEVEL)
-                next_level = list(LEVEL)[next_index]
+                available_levels = list(sorted(LEVELS.keys()))
+                next_index = (available_levels.index(self.current_level) + 1) % len(available_levels)
+                next_level = available_levels[next_index]
                 self.load_level(next_level)
 
             case arcade.key.DELETE:
