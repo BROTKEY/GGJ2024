@@ -799,8 +799,6 @@ class GameWindow(arcade.Window):
 
         camera_speed = min(np.linalg.norm(target_position - np.array(self.camera.position)) * self.camera_speed_factor, 1)
 
-        print(f"{camera_speed=}")
-
         self.camera.move_to(pymunk.Vec2d(*tuple(target_position)), camera_speed)
 
     def on_draw(self):
