@@ -6,6 +6,7 @@ import pymunk
 import numpy as np
 from PIL import Image
 from pathlib import Path
+import time
 
 from typing import Optional
 from enum import Enum
@@ -749,6 +750,16 @@ class GameWindow(arcade.Window):
         else:
             # Player's feet are not moving. Therefore up the friction so we stop.
             self.physics_engine.set_friction(self.player_sprite, 1.0)
+
+        # Delete old blood
+        new_particle_list = arcade.SpriteList()
+        t = time.time()
+        for blood in self.particle_list:
+            if isinstance(blood, ParticleSprite) and t >= blood.killtime:
+                self.physics_engine.remove_sprite(blood)
+            else:
+                new_particle_list.append(blood)
+        self.particle_list = new_particle_list
 
         self.update_gravity(hand_gesture_update=True)
         self.update_platforms()
