@@ -2,6 +2,7 @@ import pathlib
 import random
 import arcade
 import pymunk
+from pyglet.math import Vec2
 
 import numpy as np
 from PIL import Image
@@ -470,6 +471,7 @@ class GameWindow(arcade.Window):
         # respawn
         self.player_sprite.position = self.start_center
         self.physics_engine.set_position(self.player_sprite, self.start_center)
+        self.camera.position = Vec2(*self.start_center)
 
     def spawn_item(self, filename, center_x, center_y, width, height, mass=5.0, friction=0.2, elasticity=None):
         """Spawn one of the diversifier items into the scene"""
