@@ -125,8 +125,6 @@ class GameWindow(arcade.Window):
         # Create the sprite lists
         self.player_list = arcade.SpriteList()
         self.platform_list = arcade.SpriteList()
-        self.particle_list = arcade.SpriteList()
-        self.spawned_item_list = arcade.SpriteList()
 
         # Used for dragging shapes around with the mouse
         self.last_mouse_position = 0, 0
@@ -194,6 +192,9 @@ class GameWindow(arcade.Window):
         self.camera = arcade.Camera(self.width, self.height)
         self.camera_speed_factor = CAMERA_SPEED
 
+        self.particle_list = arcade.SpriteList()
+        self.spawned_item_list = arcade.SpriteList()
+
         # Pull the sprite layers out of the tile map
         self.wall_list = tile_map.sprite_lists["Platforms"]
         self.item_list = tile_map.sprite_lists["Dynamic Items"]
@@ -202,6 +203,7 @@ class GameWindow(arcade.Window):
         self.finish_list = tile_map.sprite_lists.get('Finish') or arcade.SpriteList()
         entities = tile_map.sprite_lists.get('Entities') or []
 
+        self.entities = []
         for sprite in entities:
             print(sprite.properties)
             match sprite.properties.get('type'):
