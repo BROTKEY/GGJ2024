@@ -772,9 +772,6 @@ class GameWindow(arcade.Window):
         if not (x_inbounds and y_inbounds):
             self.mark_player_dead = 'out_of_bounds'
 
-        # Move items in the physics engine
-        self.physics_engine.step()
-
         if self.level_transition:
             self.next_level()
             self.level_transition = False
