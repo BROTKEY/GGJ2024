@@ -99,28 +99,40 @@ class GameWindow(arcade.Window):
         self.particle_list = arcade.SpriteList()
         self.spawned_item_list = arcade.SpriteList()
 
-        # Map name
-        map_name = "resources/tiled_maps/Level2.json"
-        #map_name = "resources/tiled_maps/gravity_test.json"
+        # Used for dragging shapes around with the mouse
+        self.last_mouse_position = 0, 0
+        self.last_mouse_position_left = 0, 0
+        self.last_mouse_position_right = 0, 0
 
-        # Load in TileMap
-        tile_map = arcade.load_tilemap(map_name, SPRITE_SCALING_TILES)
+        self.spawnable_assets = [str(fn) for fn in Path('assets/AFOPNGS/').glob('*.png')]
 
-        self.map_bounds_x = tile_map.width * tile_map.tile_width * tile_map.scaling
-        self.map_bounds_y = tile_map.height * tile_map.tile_height * tile_map.scaling
+        # Create player sprite
+        self.player_sprite = PlayerSprite(hit_box_algorithm="Detailed")
 
-        self.width = int(min(self.width, self.map_bounds_x))
-        self.height = int(min(self.height, self.map_bounds_y))
-        self.camera = arcade.Camera(self.width, self.height)
-        self.camera_speed_factor = CAMERA_SPEED
+        # Add to player sprite list
+        self.player_list.append(self.player_sprite)
 
-        # Pull the sprite layers out of the tile map
-        self.wall_list = tile_map.sprite_lists["Platforms"]
-        self.item_list = tile_map.sprite_lists["Dynamic Items"]
-        self.background_list = tile_map.sprite_lists["Background"]
-        self.soft_list = tile_map.sprite_lists.get('Soft') or arcade.SpriteList()
-        self.finish_list = tile_map.sprite_lists.get('Finish') or arcade.SpriteList()
+        self.available_level_tilemaps = {
+            LEVEL.PLATFORMS: arcade.load_tilemap("resources/tiled_maps/Level1.json", SPRITE_SCALING_TILES),
+            LEVEL.GRAVITY: arcade.load_tilemap("resources/tiled_maps/Level2.json", SPRITE_SCALING_TILES)
+        }
 
+        # --- Pymunk Physics Engine Setup ---
+
+        # The default damping for every object controls the percent of velocity
+        # the object will keep each second. A value of 1.0 is no speed loss,
+        # 0.9 is 10% per second, 0.1 is 90% per second.
+        # For top-down games, this is basically the friction for moving objects.
+        # For platformers with gravity, this should probably be set to 1.0.
+        # Default value is 1.0 if not specified.
+        self.damping = DEFAULT_DAMPING
+
+        # Set the gravity. (0, 0) is good for outer space and top-down.
+        # gravity = (0, -GRAVITY)
+
+        self.load_level(LEVEL.PLATFORMS)
+
+    def setup_platforms(self):
         # player-controlled platforms
         size = 64
         mass = 1.0
@@ -136,10 +148,27 @@ class GameWindow(arcade.Window):
             sprite = ControllablePlatformSprite(shape, ":resources:images/tiles/boxCrate_double.png", width=2*size, height=size)
             self.platform_list.append(sprite)
 
-        self.spawnable_assets = [str(fn) for fn in Path('assets/AFOPNGS/').glob('*.png')]
+        self.platform_left = self.platform_list[0]
+        self.platform_right = self.platform_list[1]
 
-        # Create player sprite
-        self.player_sprite = PlayerSprite(hit_box_algorithm="Detailed")
+    def load_level(self, level):
+        self.current_level = level
+
+        tile_map = self.available_level_tilemaps[level]
+        self.map_bounds_x = tile_map.width * tile_map.tile_width * tile_map.scaling
+        self.map_bounds_y = tile_map.height * tile_map.tile_height * tile_map.scaling
+
+        self.width = int(min(self.width, self.map_bounds_x))
+        self.height = int(min(self.height, self.map_bounds_y))
+        self.camera = arcade.Camera(self.width, self.height)
+        self.camera_speed_factor = CAMERA_SPEED
+
+        # Pull the sprite layers out of the tile map
+        self.wall_list = tile_map.sprite_lists["Platforms"]
+        self.item_list = tile_map.sprite_lists["Dynamic Items"]
+        self.background_list = tile_map.sprite_lists["Background"]
+        self.soft_list = tile_map.sprite_lists.get('Soft') or arcade.SpriteList()
+        self.finish_list = tile_map.sprite_lists.get('Finish') or arcade.SpriteList()
 
         # Get player start from level
         start_sprite_list = tile_map.sprite_lists.get('Start')
@@ -155,36 +184,14 @@ class GameWindow(arcade.Window):
             self.start_center = ((tile_map.width * SPRITE_SIZE) / 2, (tile_map.height * SPRITE_SIZE) / 2)
             self.player_sprite.center_x, self.player_sprite.center_y = self.start_center
 
-        # Add to player sprite list
-        self.player_list.append(self.player_sprite)
-
         # Get finish
         if not self.finish_list:
             print('WARNING: No finish was defined, this level is unbeatable!')
 
-        # Used for dragging shapes around with the mouse
-        self.platform_left = self.platform_list[0]
-        self.platform_right = self.platform_list[1]
-        self.last_mouse_position = 0, 0
-        self.last_mouse_position_left = 0, 0
-        self.last_mouse_position_right = 0, 0
-
-        # --- Pymunk Physics Engine Setup ---
-
-        # The default damping for every object controls the percent of velocity
-        # the object will keep each second. A value of 1.0 is no speed loss,
-        # 0.9 is 10% per second, 0.1 is 90% per second.
-        # For top-down games, this is basically the friction for moving objects.
-        # For platformers with gravity, this should probably be set to 1.0.
-        # Default value is 1.0 if not specified.
-        damping = DEFAULT_DAMPING
-
-        # Set the gravity. (0, 0) is good for outer space and top-down.
-        # gravity = (0, -GRAVITY)
-
         # Create the physics engine
-        self.physics_engine = arcade.PymunkPhysicsEngine(damping=damping,
-                                                         gravity=tuple(self.main_gravity))
+        self.physics_engine = arcade.PymunkPhysicsEngine(damping=self.damping,
+                                                         gravity=tuple(
+                                                             self.main_gravity))
 
         # Add the player.
         # For the player, we set the damping to a lower value, which increases
@@ -233,6 +240,8 @@ class GameWindow(arcade.Window):
         self.physics_engine.add_sprite_list(self.finish_list,
                                             collision_type='finish',
                                             body_type=arcade.PymunkPhysicsEngine.STATIC)
+
+        self.setup_platforms()
 
         # add platforms moved by second player
         self.physics_engine.add_sprite_list(
@@ -497,7 +506,8 @@ class GameWindow(arcade.Window):
             case arcade.key.ENTER:
                 self.enter_pressed = True
                 next_index = (list(LEVEL).index(self.current_level) + 1) % len(LEVEL)
-                self.current_level = list(LEVEL)[next_index]
+                next_level = list(LEVEL)[next_index]
+                self.load_level(next_level)
 
             case arcade.key.DELETE:
                 self.kill_player('Keyboard')
