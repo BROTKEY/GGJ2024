@@ -654,6 +654,11 @@ class GameWindow(arcade.Window):
         # Move items in the physics engine
         self.physics_engine.step()
 
+        x_inbounds = (0 <= self.player_sprite.center_x <= self.map_bounds_x)
+        y_inbounds = (0 <= self.player_sprite.center_y <= self.map_bounds_y)
+        if not (x_inbounds and y_inbounds):
+            self.kill_player('out of bounds')
+
         self.scroll_to_player()
 
     def scroll_to_player(self):
