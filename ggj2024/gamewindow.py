@@ -284,7 +284,7 @@ class GameWindow(arcade.Window):
         def handle_player_wall_collision(player_sprite: PlayerSprite, wall_sprite: arcade.sprite, arbiter: pymunk.Arbiter, space, data):
             impulse: pymunk.Vec2d = arbiter.total_impulse
             if impulse.length > 500:
-                print('wall collision, impulse =', impulse.length)
+                # print('wall collision, impulse =', impulse.length)
                 hit_sound = random.choice(self.audio_hits)
                 arcade.play_sound(hit_sound, 1.0, -1, False)
             if impulse.length > PLAYER_DEATH_IMPULSE:
@@ -294,7 +294,7 @@ class GameWindow(arcade.Window):
         def handle_player_item_collision(player_sprite: PlayerSprite, item_sprite: arcade.Sprite, arbiter: pymunk.Arbiter, space, data):
             impulse: pymunk.Vec2d = arbiter.total_impulse
             if impulse.length > 500:
-                print('object collision, impulse =', impulse.length)
+                # print('object collision, impulse =', impulse.length)
                 hit_sound = random.choice(self.audio_hits)
                 arcade.play_sound(hit_sound, 1.0, -1, False)
             if impulse.length > PLAYER_DEATH_IMPULSE:
@@ -618,9 +618,6 @@ class GameWindow(arcade.Window):
 
     def on_update(self, delta_time):
         """ Movement and game logic """
-
-        for region in self.regions:
-            print(region.is_player_inside())
 
         # Rotate player to gravity
         player_object = self.physics_engine.get_physics_object(self.player_sprite)
