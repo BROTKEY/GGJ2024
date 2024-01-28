@@ -73,8 +73,10 @@ class GameWindow(arcade.Window):
         self.splatter_texture_dict: dict[arcade.Sprite, Image.Image] = dict()
         self.splatter_counter = 0
 
+        self.backgroundcolor_list = arcade.ShapeElementList()
+
         # Set background color
-        arcade.set_background_color(arcade.color.AMAZON)
+        arcade.set_background_color((0, 0, 0))
 
         self.current_level = list(LEVEL)[0]
         self.respawn_player = False
@@ -104,7 +106,7 @@ class GameWindow(arcade.Window):
         self.spawned_item_list = arcade.SpriteList()
 
         # Map name
-        map_name = "resources/tiled_maps/SpawnerTest.json"
+        map_name = "resources/tiled_maps/Level2.json"
         #map_name = "resources/tiled_maps/gravity_test.json"
 
         # Load in TileMap
@@ -117,6 +119,13 @@ class GameWindow(arcade.Window):
         self.height = int(min(self.height, self.map_bounds_y))
         self.camera = arcade.Camera(self.width, self.height)
         self.camera_speed_factor = CAMERA_SPEED
+
+        color1 = (255,255,255)
+        color2 = (87, 207, 255)
+        points = (0, 0), (self.map_bounds_x , 0), (self.map_bounds_x, self.map_bounds_y), (0, self.map_bounds_x)
+        colors = (color1, color1, color2, color2)
+        rect = arcade.create_rectangle_filled_with_colors(points, colors)
+        self.backgroundcolor_list.append(rect)
 
         # Pull the sprite layers out of the tile map
         self.wall_list = tile_map.sprite_lists["Platforms"]
@@ -673,6 +682,7 @@ class GameWindow(arcade.Window):
         """ Draw everything """
         self.clear()
         self.camera.use()
+        self.backgroundcolor_list.draw()
         self.background_list.draw()
         self.wall_list.draw()
         self.platform_list.draw()
