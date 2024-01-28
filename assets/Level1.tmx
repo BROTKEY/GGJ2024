@@ -42,7 +42,11 @@
 </data>
  </layer>
  <objectgroup id="10" name="Entities">
-  <object id="1" type="object_spawner" gid="69" x="4334.24" y="1403.41" width="128" height="128"/>
+  <object id="1" type="object_spawner" gid="69" x="4334.24" y="1403.41" width="128" height="128">
+   <properties>
+    <property name="interval" type="float" value="2.5"/>
+   </properties>
+  </object>
  </objectgroup>
  <layer id="8" name="Finish" width="48" height="32">
   <data encoding="csv">

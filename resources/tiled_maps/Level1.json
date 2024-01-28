@@ -24,6 +24,12 @@
                  "height":128,
                  "id":1,
                  "name":"",
+                 "properties":[
+                        {
+                         "name":"interval",
+                         "type":"float",
+                         "value":2.5
+                        }],
                  "rotation":0,
                  "type":"object_spawner",
                  "visible":true,
