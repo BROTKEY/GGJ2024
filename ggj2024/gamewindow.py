@@ -535,10 +535,6 @@ class GameWindow(arcade.Window):
 
     def on_mouse_press(self, x, y, button, modifiers):
         """ Called whenever the mouse button is clicked. """
-        # HACK debug: spawn random item
-        print('spawning item at', x, y)
-        self.spawn_random_item(x+self.camera.position.x, y+self.camera.position.y, 64, 64, mass=50)
-            
         if self.leap_motion:
             # mouse interaction is only required when debugging
             return
@@ -551,11 +547,17 @@ class GameWindow(arcade.Window):
                 self.last_mouse_position_right = x, y
                 self.platform_right = self.platform_list[1]
             case arcade.MOUSE_BUTTON_MIDDLE:
-                # Test: spawn box
-                sprite = DummyBoxSprite(x, y, 32, 10.0)
-                self.item_list.append(sprite)
-                body = sprite.pymunk_shape.body
-                self.physics_engine.add_sprite(sprite, body.mass)
+                # HACK debug: spawn random item
+                print('spawning item at', x, y)
+                self.spawn_random_item(x + self.camera.position.x,
+                                       y + self.camera.position.y, 64, 64,
+                                       mass=50)
+
+                # # Test: spawn box
+                # sprite = DummyBoxSprite(x, y, 32, 10.0)
+                # self.item_list.append(sprite)
+                # body = sprite.pymunk_shape.body
+                # self.physics_engine.add_sprite(sprite, body.mass)
 
     def on_mouse_release(self, x, y, button, modifiers):
         if self.leap_motion:
