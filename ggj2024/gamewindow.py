@@ -255,7 +255,7 @@ class GameWindow(arcade.Window):
                         if region is None:
                             print(f'WARNING: ObjectSpawner had an active region defined (id={region_id}) but it was not found')
                     interval = sprite.properties.get('interval') or 1.0
-                    entity = ItemSpawner(sprite, self.item_spawned, self.spawnable_assets, max_scale=5, active_region=region, spawn_interval=interval)
+                    entity = ItemSpawner(sprite, self.item_spawned, self.spawnable_assets, max_scale=2, active_region=region, spawn_interval=interval)
                 case _:
                     print(f"ERROR: unknown entity type (=Class): {sprite.properties.get('type')}")
                     continue
@@ -502,7 +502,8 @@ class GameWindow(arcade.Window):
             removed = self.spawned_item_list.pop(0)
             self.physics_engine.remove_sprite(removed)
         self.spawned_item_list.append(sprite)
-        self.physics_engine.add_sprite(sprite, mass, friction, elasticity, collision_type='item')
+        self.physics_engine.add_sprite(sprite, mass, friction, elasticity, collision_type='item',
+                                       max_velocity=ITEM_MAX_VELOCITY)
         
 
     # TODO: combinations of direction buttons could be done better, this is just for testing
