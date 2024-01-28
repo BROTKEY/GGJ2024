@@ -476,8 +476,7 @@ class GameWindow(arcade.Window):
             self.physics_engine.add_sprite(particle, particle_mass, radius=particle_size, collision_type='particle')
             self.physics_engine.apply_impulse(particle, tuple((np.random.rand(2)-.5)*2000))
 
-        if reason in ['out_of_bounds', 'keyboard']:
-            self.physics_engine.set_position(self.player_sprite,
+        self.physics_engine.set_position(self.player_sprite,
                                              self.start_center)
 
         print("TODO respawn")
