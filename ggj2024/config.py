@@ -54,7 +54,7 @@ PLAYER_MOVE_FORCE_IN_AIR = 5000
 # Strength of a jump
 PLAYER_JUMP_IMPULSE = 1500
 
-PLAYER_DEATH_IMPULSE = 5000
+PLAYER_DEATH_IMPULSE = 3500
 
 # Close enough to not-moving to have the animation go to idle.
 DEAD_ZONE = 0.1
@@ -71,4 +71,6 @@ DISTANCE_TO_CHANGE_TEXTURE = 20
 FORCES_RELATIVE_TO_PLAYER = True
 
 # Defines how many (additionally spawned) diversifier items can exist at one time
-MAX_SPAWNED_ITEMS = 100
+MAX_SPAWNED_ITEMS = 10
+
+FIST_THRESHOLD = 2.5

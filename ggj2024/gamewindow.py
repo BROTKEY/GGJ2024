@@ -14,13 +14,37 @@ from ggj2024.HandReceiver import HandReceiver
 from ggj2024.config import *
 from ggj2024.utils import normalize_vector, rotate90_cw, rotate90_ccw
 from ggj2024.sprites import ParticleSprite, PlayerSprite, PhysicsSprite, ControllablePlatformSprite, DummyBoxSprite
-from ggj2024.itemspawner import ItemSpawner
+from ggj2024.itemspawner import ItemSpawner, Entity
+from ggj2024.region import Region
 
 
-class LEVEL(Enum):
+class MECHANICS(Enum):
     PLATFORMS = 1
     GRAVITY = 2
 
+
+LEVELS = {
+    1: {
+        'tilemap': arcade.load_tilemap("resources/tiled_maps/Level1.json",
+                                         SPRITE_SCALING_TILES),
+        'mechanics': MECHANICS.PLATFORMS
+    },
+    2: {
+        'tilemap': arcade.load_tilemap("resources/tiled_maps/Level2.json",
+                                       SPRITE_SCALING_TILES),
+        'mechanics': MECHANICS.GRAVITY
+    },
+    3: {
+        'tilemap': arcade.load_tilemap("resources/tiled_maps/Level3.json",
+                                       SPRITE_SCALING_TILES),
+        'mechanics': MECHANICS.PLATFORMS
+    },
+    4: {
+        'tilemap': arcade.load_tilemap("resources/tiled_maps/PitOfDoom.json",
+                                       SPRITE_SCALING_TILES),
+        'mechanics': MECHANICS.GRAVITY
+    },
+}
 
 class GameWindow(arcade.Window):
     """ Main Window """
@@ -51,7 +75,8 @@ class GameWindow(arcade.Window):
 
         self.spawnable_assets: list[str] = []
 
-        self.entities: list = []
+        self.regions: list[Region] = []
+        self.entities: list[Entity] = []
 
         # Track the current state of what key is pressed
         self.a_pressed: bool = False
@@ -78,9 +103,10 @@ class GameWindow(arcade.Window):
         # Set background color
         arcade.set_background_color((0, 0, 0))
 
-        self.current_level = list(LEVEL)[0]
+        self.current_level = 1
         self.respawn_player = False
         self.leap_motion = leap_motion
+        self.level_transition = False
 
         # Loading the audio file
         self.audio_theme = arcade.load_sound('resources/sound/theme.mp3', False)
@@ -102,8 +128,6 @@ class GameWindow(arcade.Window):
         # Create the sprite lists
         self.player_list = arcade.SpriteList()
         self.platform_list = arcade.SpriteList()
-        self.particle_list = arcade.SpriteList()
-        self.spawned_item_list = arcade.SpriteList()
 
         # Used for dragging shapes around with the mouse
         self.last_mouse_position = 0, 0
@@ -118,13 +142,6 @@ class GameWindow(arcade.Window):
         # Add to player sprite list
         self.player_list.append(self.player_sprite)
 
-        self.available_level_tilemaps = {
-            LEVEL.PLATFORMS: arcade.load_tilemap("resources/tiled_maps/Level1.json", SPRITE_SCALING_TILES),
-            LEVEL.GRAVITY: arcade.load_tilemap("resources/tiled_maps/Level2.json", SPRITE_SCALING_TILES),
-            LEVEL.PLATFORMS: arcade.load_tilemap("resources/tiled_maps/Level3.json", SPRITE_SCALING_TILES),
-            LEVEL.GRAVITY: arcade.load_tilemap("resources/tiled_maps/PitOfDoom.json", SPRITE_SCALING_TILES),
-        }
-
         # --- Pymunk Physics Engine Setup ---
 
         # The default damping for every object controls the percent of velocity
@@ -138,7 +155,7 @@ class GameWindow(arcade.Window):
         # Set the gravity. (0, 0) is good for outer space and top-down.
         # gravity = (0, -GRAVITY)
 
-        self.load_level(LEVEL.PLATFORMS)
+        self.load_level(self.current_level)
 
     def setup_platforms(self):
         # player-controlled platforms
@@ -162,9 +179,10 @@ class GameWindow(arcade.Window):
     def load_level(self, level):
         self.current_level = level
 
-        tile_map = self.available_level_tilemaps[level]
+        tile_map = LEVELS[self.current_level]['tilemap']
         self.map_bounds_x = tile_map.width * tile_map.tile_width * tile_map.scaling
         self.map_bounds_y = tile_map.height * tile_map.tile_height * tile_map.scaling
+        self.map_bounds_unscaled = [tile_map.width * tile_map.tile_width, tile_map.height * tile_map.tile_height]
 
         color1 = (255,255,255)
         color2 = (87, 207, 255)
@@ -178,23 +196,17 @@ class GameWindow(arcade.Window):
         self.camera = arcade.Camera(self.width, self.height)
         self.camera_speed_factor = CAMERA_SPEED
 
+        self.particle_list = arcade.SpriteList()
+        self.spawned_item_list = arcade.SpriteList()
+
         # Pull the sprite layers out of the tile map
         self.wall_list = tile_map.sprite_lists["Platforms"]
         self.item_list = tile_map.sprite_lists["Dynamic Items"]
         self.background_list = tile_map.sprite_lists["Background"]
         self.soft_list = tile_map.sprite_lists.get('Soft') or arcade.SpriteList()
-        self.finish_list = tile_map.sprite_lists.get('Finish') or arcade.SpriteList()    
-        entities = tile_map.sprite_lists.get('Entities') or []
-        
-        for sprite in entities:
-            print(sprite.properties)
-            match sprite.properties.get('type'):
-                case 'object_spawner':
-                    entity = ItemSpawner(sprite, self.item_spawned, self.spawnable_assets)
-                case _:
-                    print(f"ERROR: unknown entity type (Class): {sprite.properties.get('class')}")
-                    continue
-            self.entities.append(entity)
+        self.finish_list = tile_map.sprite_lists.get('Finish') or arcade.SpriteList()
+        map_entities = tile_map.sprite_lists.get('Entities') or []
+        map_objects = tile_map.object_lists.get('Regions') or []
 
         # Get player start from level
         start_sprite_list = tile_map.sprite_lists.get('Start')
@@ -210,6 +222,38 @@ class GameWindow(arcade.Window):
             self.start_center = ((tile_map.width * SPRITE_SIZE) / 2, (tile_map.height * SPRITE_SIZE) / 2)
             self.player_sprite.center_x, self.player_sprite.center_y = self.start_center
 
+        # Load objectes and entities
+        regions = dict[int, Region]()
+        for obj in (map_objects):
+            print(f'Loading object (type={obj.type})')
+            match obj.type:
+                case 'region':
+                    shape = [(x*tile_map.scaling, self.map_bounds_y + y*tile_map.scaling) for x, y in obj.shape]
+                    region = Region(shape, self.player_sprite)
+                    regions[obj.properties['id']] = region
+                    self.regions.append(region)
+                case _:
+                    print(f"ERROR: unknown object type (=Class): {obj.type}")
+                    continue
+
+        for sprite in map_entities:
+            t = sprite.properties.get('type')
+            print(f'Loading entity (type={t})')
+            match t:
+                case 'object_spawner':
+                    region_id = sprite.properties.get('active_region')
+                    if region_id is None:
+                        region = None
+                    else:
+                        region = regions.get(region_id)
+                        if region is None:
+                            print(f'WARNING: ObjectSpawner had an active region defined (id={region_id}) but it was not found')
+                    interval = sprite.properties.get('interval') or 1.0
+                    entity = ItemSpawner(sprite, self.item_spawned, self.spawnable_assets, max_scale=5, active_region=region, spawn_interval=interval)
+                case _:
+                    print(f"ERROR: unknown entity type (=Class): {sprite.properties.get('type')}")
+                    continue
+            self.entities.append(entity)
         # Get finish
         if not self.finish_list:
             print('WARNING: No finish was defined, this level is unbeatable!')
@@ -281,7 +325,7 @@ class GameWindow(arcade.Window):
         def handle_player_wall_collision(player_sprite: PlayerSprite, wall_sprite: arcade.sprite, arbiter: pymunk.Arbiter, space, data):
             impulse: pymunk.Vec2d = arbiter.total_impulse
             if impulse.length > 500:
-                print('wall collision, impulse =', impulse.length)
+                # print('wall collision, impulse =', impulse.length)
                 hit_sound = random.choice(self.audio_hits)
                 arcade.play_sound(hit_sound, 1.0, -1, False)
             if impulse.length > PLAYER_DEATH_IMPULSE:
@@ -291,7 +335,7 @@ class GameWindow(arcade.Window):
         def handle_player_item_collision(player_sprite: PlayerSprite, item_sprite: arcade.Sprite, arbiter: pymunk.Arbiter, space, data):
             impulse: pymunk.Vec2d = arbiter.total_impulse
             if impulse.length > 500:
-                print('object collision, impulse =', impulse.length)
+                # print('object collision, impulse =', impulse.length)
                 hit_sound = random.choice(self.audio_hits)
                 arcade.play_sound(hit_sound, 1.0, -1, False)
             if impulse.length > PLAYER_DEATH_IMPULSE:
@@ -302,6 +346,7 @@ class GameWindow(arcade.Window):
             # TODO level done
             print('Congratulations, you reached the goal!')
             # return False to cancel collisions
+            self.level_transition = True
             return False
 
         self.physics_engine.add_collision_handler('player', 'wall', post_handler=handle_player_wall_collision)
@@ -426,7 +471,7 @@ class GameWindow(arcade.Window):
     def spawn_random_item(self, center_x, center_y, width=64, height=64, mass=5.0, friction=0.2, elasticity=None):
         return self.spawn_item(np.random.choice(self.spawnable_assets),
                                center_x, center_y, width, height, mass, friction, elasticity)
-    
+
     def item_spawned(self, sprite, mass=5.0, friction=0.2, elasticity=None):
         while len(self.spawned_item_list) >= MAX_SPAWNED_ITEMS:
             removed = self.spawned_item_list.pop(0)
@@ -437,7 +482,7 @@ class GameWindow(arcade.Window):
 
     # TODO: combinations of direction buttons could be done better, this is just for testing
     def update_gravity(self, hand_gesture_update=False):
-        if not self.current_level == LEVEL.GRAVITY:
+        if not LEVELS[self.current_level]['mechanics'] == MECHANICS.GRAVITY:
             return
 
         if hand_gesture_update:
@@ -454,7 +499,6 @@ class GameWindow(arcade.Window):
                 new_grav = (v[1], -v[0])
                 new_grav = normalize_vector(new_grav) * GRAVITY
 
-                FIST_THRESHOLD = 2.5
                 fists_shown = self.hands.left_hand.grab_angle > FIST_THRESHOLD and self.hands.right_hand.grab_angle > FIST_THRESHOLD
                 if fists_shown:
                     new_grav = -new_grav
@@ -476,21 +520,31 @@ class GameWindow(arcade.Window):
         self.main_gravity = new_grav
 
     def update_platforms(self):
-        if not self.current_level == LEVEL.PLATFORMS:
+        if not LEVELS[self.current_level]['mechanics'] == MECHANICS.PLATFORMS:
             return
 
         if self.leap_motion:
+
+            if self.hands.right_hand.grab_angle > FIST_THRESHOLD:
+                print("fix right platform position")
+
             # update platform positions based on second player input
             if self.platform_left:
-                lx = self.hands.left_hand.x
-                ly = self.hands.left_hand.y
-                pos = (self.camera.position.x + self.width/2 + lx, self.camera.position.y + ly)
-                self.physics_engine.set_position(self.platform_left, pos)
+                if self.hands.left_hand.grab_angle > FIST_THRESHOLD:
+                    print("fix left platform position")
+                else:
+                    lx = self.hands.left_hand.x
+                    ly = self.hands.left_hand.y
+                    pos = (self.camera.position.x + self.width/2 + lx, self.camera.position.y + ly)
+                    self.physics_engine.set_position(self.platform_left, pos)
             if self.platform_right:
-                rx = self.hands.right_hand.x
-                ry = self.hands.right_hand.y
-                pos = (self.camera.position.x + self.width/2 + rx, self.camera.position.y + ry)
-                self.physics_engine.set_position(self.platform_right, pos)
+                if self.hands.right_hand.grab_angle > FIST_THRESHOLD:
+                    print("fix right platform position")
+                else:
+                    rx = self.hands.right_hand.x
+                    ry = self.hands.right_hand.y
+                    pos = (self.camera.position.x + self.width/2 + rx, self.camera.position.y + ry)
+                    self.physics_engine.set_position(self.platform_right, pos)
         else:
             # update platform position based on mouse input
             if self.platform_left:
@@ -499,6 +553,13 @@ class GameWindow(arcade.Window):
             if self.platform_right:
                 pos = tuple(self.camera.position + pymunk.Vec2d(self.last_mouse_position_right[0], self.last_mouse_position_right[1]))
                 self.physics_engine.set_position(self.platform_right, pos)
+
+    def next_level(self):
+        available_levels = list(sorted(LEVELS.keys()))
+        next_index = (available_levels.index(self.current_level) + 1) % len(
+            available_levels)
+        next_level = available_levels[next_index]
+        self.load_level(next_level)
 
     def on_key_press(self, key, modifiers):
         """Called whenever a key is pressed. """
@@ -534,9 +595,7 @@ class GameWindow(arcade.Window):
 
             case arcade.key.ENTER:
                 self.enter_pressed = True
-                next_index = (list(LEVEL).index(self.current_level) + 1) % len(LEVEL)
-                next_level = list(LEVEL)[next_index]
-                self.load_level(next_level)
+                self.next_level()
 
             case arcade.key.DELETE:
                 self.kill_player('Keyboard')
@@ -674,6 +733,15 @@ class GameWindow(arcade.Window):
 
         # Move items in the physics engine
         self.physics_engine.step()
+
+        x_inbounds = (0 <= self.player_sprite.center_x <= self.map_bounds_x)
+        y_inbounds = (0 <= self.player_sprite.center_y <= self.map_bounds_y)
+        if not (x_inbounds and y_inbounds):
+            self.kill_player('out of bounds')
+
+        if self.level_transition:
+            self.next_level()
+            self.level_transition = False
 
         self.scroll_to_player()
 
