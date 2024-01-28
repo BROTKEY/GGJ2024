@@ -85,4 +85,8 @@ class ItemSpawner(Entity):
         sprite.height = int(h)
         sprite.center_x = self.sprite.center_x
         sprite.center_y = self.sprite.center_y
-        self.register_callback(sprite, mass=mass,**self.callback_args)
+        try:
+            self.register_callback(sprite, mass=mass,**self.callback_args)
+        except Exception as err:
+            print('Error in ItemSpawner.register_callback')
+            print(err)
