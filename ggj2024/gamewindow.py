@@ -433,6 +433,7 @@ class GameWindow(arcade.Window):
                                                   begin_handler=lambda *args: np.random.rand() > 0.5)
         self.physics_engine.add_collision_handler('particle', 'soft', post_handler=handle_particle_x_collision)
         self.physics_engine.add_collision_handler('particle', 'player', pre_handler=lambda *args: False)
+        self.physics_engine.add_collision_handler('particle', 'platform', pre_handler=lambda *args: False)
         
         self.physics_engine.add_collision_handler('particle', 'finish', pre_handler=lambda *args: False)
         self.physics_engine.add_collision_handler('item', 'finish', pre_handler=lambda *args: False)
