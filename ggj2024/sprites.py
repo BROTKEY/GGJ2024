@@ -30,13 +30,16 @@ class PlayerSprite(arcade.Sprite):
         # Load textures for idle standing
         self.idle_texture_pair = arcade.load_texture_pair(f"{main_path}/idle.png",
                                                           hit_box_algorithm=hit_box_algorithm)
-        self.jump_texture_pair = arcade.load_texture_pair(f"{main_path}/jump.png")
-        self.fall_texture_pair = arcade.load_texture_pair(f"{main_path}/fall.png")
+        self.jump_texture_pair = arcade.load_texture_pair(f"{main_path}/jump.png",
+                                                          hit_box_algorithm=hit_box_algorithm)
+        self.fall_texture_pair = arcade.load_texture_pair(f"{main_path}/fall.png",
+                                                          hit_box_algorithm=hit_box_algorithm)
 
         # Load textures for walking
         self.walk_textures = []
         for i in range(1, 9):
-            texture = arcade.load_texture_pair(f"{main_path}/walk{i}.png")
+            texture = arcade.load_texture_pair(f"{main_path}/walk{i}.png",
+                                                          hit_box_algorithm=hit_box_algorithm)
             self.walk_textures.append(texture)
 
         # Set the initial texture
