@@ -104,6 +104,7 @@ class GameWindow(arcade.Window):
         self.current_level = 1
         self.respawn_player = False
         self.leap_motion = leap_motion
+        self.level_transition = False
 
         # Loading the audio file
         self.audio_theme = arcade.load_sound('resources/sound/theme.mp3', False)
@@ -320,6 +321,7 @@ class GameWindow(arcade.Window):
             # TODO level done
             print('Congratulations, you reached the goal!')
             # return False to cancel collisions
+            self.level_transition = True
             return False
 
         self.physics_engine.add_collision_handler('player', 'wall', post_handler=handle_player_wall_collision)
@@ -518,6 +520,13 @@ class GameWindow(arcade.Window):
                 pos = tuple(self.camera.position + pymunk.Vec2d(self.last_mouse_position_right[0], self.last_mouse_position_right[1]))
                 self.physics_engine.set_position(self.platform_right, pos)
 
+    def next_level(self):
+        available_levels = list(sorted(LEVELS.keys()))
+        next_index = (available_levels.index(self.current_level) + 1) % len(
+            available_levels)
+        next_level = available_levels[next_index]
+        self.load_level(next_level)
+
     def on_key_press(self, key, modifiers):
         """Called whenever a key is pressed. """
         match key:
@@ -552,10 +561,7 @@ class GameWindow(arcade.Window):
 
             case arcade.key.ENTER:
                 self.enter_pressed = True
-                available_levels = list(sorted(LEVELS.keys()))
-                next_index = (available_levels.index(self.current_level) + 1) % len(available_levels)
-                next_level = available_levels[next_index]
-                self.load_level(next_level)
+                self.next_level()
 
             case arcade.key.DELETE:
                 self.kill_player('Keyboard')
@@ -698,6 +704,10 @@ class GameWindow(arcade.Window):
         y_inbounds = (0 <= self.player_sprite.center_y <= self.map_bounds_y)
         if not (x_inbounds and y_inbounds):
             self.kill_player('out of bounds')
+
+        if self.level_transition:
+            self.next_level()
+            self.level_transition = False
 
         self.scroll_to_player()
 
