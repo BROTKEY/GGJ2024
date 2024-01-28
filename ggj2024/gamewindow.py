@@ -186,12 +186,13 @@ class GameWindow(arcade.Window):
                 case 'object_spawner':
                     region_id = sprite.properties.get('active_region')
                     if region_id is None:
-                        shape = None
+                        region = None
                     else:
-                        shape = regions.get(region_id)
-                        if shape is None:
+                        region = regions.get(region_id)
+                        if region is None:
                             print(f'WARNING: ObjectSpawner had an active region defined (id={region_id}) but it was not found')
-                    entity = ItemSpawner(sprite, self.item_spawned, self.spawnable_assets, max_scale=5, active_region=shape)
+                    interval = sprite.properties.get('interval') or 1.0
+                    entity = ItemSpawner(sprite, self.item_spawned, self.spawnable_assets, max_scale=5, active_region=region, spawn_interval=interval)
                 case _:
                     print(f"ERROR: unknown entity type (=Class): {sprite.properties.get('type')}")
                     continue

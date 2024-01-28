@@ -61,6 +61,7 @@
   <object id="1" type="object_spawner" gid="69" x="2050" y="5120" width="128" height="128">
    <properties>
     <property name="active_region" type="int" value="0"/>
+    <property name="interval" type="float" value="0.1"/>
    </properties>
   </object>
  </objectgroup>

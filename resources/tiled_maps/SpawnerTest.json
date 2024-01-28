@@ -76,6 +76,11 @@
                          "name":"active_region",
                          "type":"int",
                          "value":0
+                        }, 
+                        {
+                         "name":"interval",
+                         "type":"float",
+                         "value":0.1
                         }],
                  "rotation":0,
                  "type":"object_spawner",
