@@ -251,6 +251,11 @@ class GameWindow(arcade.Window):
                     print(f"ERROR: unknown object type (=Class): {obj.type}")
                     continue
 
+        try:
+            for e in self.entities:
+                self.physics_engine.remove_sprite(e.sprite)
+        except: pass
+        self.entities = [] 
         for sprite in map_entities:
             t = sprite.properties.get('type')
             print(f'Loading entity (type={t})')
