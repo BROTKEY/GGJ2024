@@ -274,6 +274,8 @@ class GameWindow(arcade.Window):
         self.physics_engine.add_collision_handler('player', 'finish', begin_handler=handle_player_finish_collision)
 
         def handle_particle_x_collision(particle: ParticleSprite, other: arcade.Sprite, arbiter: pymunk.Arbiter, space, data):
+            # HACK: store old width and height, reset them after changing the texture
+            old_w, old_h = other.width, other.height
             self.physics_engine.remove_sprite(particle)
             self.particle_list.remove(particle)
             # contacts: pymunk.ContactPointSet = arbiter.contact_point_set
@@ -289,16 +291,17 @@ class GameWindow(arcade.Window):
                 image = other.texture.image.copy()
             tex_name = f'splatter_{self.splatter_counter}'
             self.splatter_counter += 1
-            scale = image.width / other.width
+            scale_x = image.width / other.width
+            scale_y = image.height / other.height
             splatter = particle.texture.image
             splat_size = int(5*particle.radius)
             splatter = splatter.resize((splat_size, splat_size))
-            contact_rel *= scale
+            # contact_rel *= scale
             # Make it apply to a little bit smaller region so that particles will be visible
-            x = contact_rel.x
-            y = image.height - contact_rel.y
-            x = 0.9 * x
-            y = 0.9 * y
+            x = contact_rel.x * scale_x
+            y = image.height - contact_rel.y * scale_y 
+            x = 0.95 * x
+            y = 0.95 * y
             x += 0.05 * image.width
             y += 0.05 * image.height
             x = int(x)
@@ -313,6 +316,8 @@ class GameWindow(arcade.Window):
             self.splatter_texture_dict[other] = image
             texture = arcade.Texture(tex_name, image)
             other.texture = texture
+            other.width, other.height = old_w, old_h
+            
 
         self.physics_engine.add_collision_handler('particle', 'wall', post_handler=handle_particle_x_collision)
         self.physics_engine.add_collision_handler('particle', 'item', post_handler=handle_particle_x_collision)
@@ -373,9 +378,10 @@ class GameWindow(arcade.Window):
         # respawn
         self.physics_engine.set_position(self.player_sprite, self.start_center)
 
-    def spawn_item(self, filename, center_x, center_y, width, height, mass=2.0, friction=0.2, elasticity=None):
+    def spawn_item(self, filename, center_x, center_y, width, height, mass=5.0, friction=0.2, elasticity=None):
         """Spawn one of the diversifier items into the scene"""
-        sprite = arcade.Sprite(filename)
+        sprite = arcade.Sprite(filename)#, scale=0.5)
+        # sprite.
         sprite.width = width
         sprite.height = height
         sprite.center_x = center_x
@@ -387,7 +393,7 @@ class GameWindow(arcade.Window):
         self.physics_engine.add_sprite(sprite, mass, friction, elasticity, collision_type='item')
         return sprite
 
-    def spawn_random_item(self, center_x, center_y, width=1, height=1, mass=2.0, friction=0.2, elasticity=None):
+    def spawn_random_item(self, center_x, center_y, width=64, height=64, mass=5.0, friction=0.2, elasticity=None):
         return self.spawn_item(np.random.choice(self.spawnable_assets),
                                center_x, center_y, width, height, mass, friction, elasticity)
         
@@ -530,12 +536,12 @@ class GameWindow(arcade.Window):
 
     def on_mouse_press(self, x, y, button, modifiers):
         """ Called whenever the mouse button is clicked. """
-        if self.leap_motion:
-            # HACK debug: spawn random item
-            # mouse interaction is only required when debugging
-            print('spawning item at', x, y)
-            self.spawn_random_item(x+self.camera.position.x, y+self.camera.position.y, 64, 64, mass=5)
+        # HACK debug: spawn random item
+        print('spawning item at', x, y)
+        self.spawn_random_item(x+self.camera.position.x, y+self.camera.position.y, 64, 64, mass=50)
             
+        if self.leap_motion:
+            # mouse interaction is only required when debugging
             return
 
         match button:
