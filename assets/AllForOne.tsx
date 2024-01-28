@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<tileset version="1.8" tiledversion="1.8.0" name="AllForOne" tilewidth="128" tileheight="128" tilecount="40" columns="0">
+<tileset version="1.8" tiledversion="1.8.0" name="AllForOne" tilewidth="128" tileheight="128" tilecount="41" columns="0">
  <grid orientation="orthogonal" width="1" height="1"/>
  <tile id="63">
   <image width="128" height="128" source="AFOPNGS/1.png"/>
@@ -120,5 +120,8 @@
  </tile>
  <tile id="104">
   <image width="128" height="128" source="AFOPNGS/06h (2).png"/>
+ </tile>
+ <tile id="105">
+  <image width="128" height="128" source="AFOPNGS/sun1.png"/>
  </tile>
 </tileset>
