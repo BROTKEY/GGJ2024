@@ -72,6 +72,7 @@ class GameWindow(arcade.Window):
         self.item_list: Optional[arcade.SpriteList] = None
         self.moving_sprites_list: Optional[arcade.SpriteList] = None
         self.platform_list: Optional[arcade.SpriteList] = None
+        self.controllable_platform_list: Optional[arcade.SpriteList] = None
         self.particle_list: Optional[arcade.SpriteList] = None
         self.background_list: Optional[arcade.SpriteList] = None
         self.soft_list: Optional[arcade.SpriteList] = None
@@ -166,6 +167,8 @@ class GameWindow(arcade.Window):
         # player-controlled platforms
         size = 64
         mass = 1.0
+
+        self.controllable_platform_list = arcade.SpriteList()
         for i in range(2):
             x = 10 + size * i
             y = 10
@@ -176,10 +179,10 @@ class GameWindow(arcade.Window):
             shape.elasticity = 0.2
             shape.friction = 0.9
             sprite = ControllablePlatformSprite(shape)#, ":resources:images/tiles/boxCrate_double.png", width=2*size, height=size)
-            self.platform_list.append(sprite)
+            self.controllable_platform_list.append(sprite)
 
-        self.platform_left = self.platform_list[0]
-        self.platform_right = self.platform_list[1]
+        self.platform_left = self.controllable_platform_list[0]
+        self.platform_right = self.controllable_platform_list[1]
 
         self.platform_left_collision = False
         self.platform_right_collision = False
@@ -330,12 +333,21 @@ class GameWindow(arcade.Window):
         self.physics_engine.add_sprite_list(self.finish_list,
                                             collision_type='finish',
                                             body_type=arcade.PymunkPhysicsEngine.STATIC)
+        self.physics_engine.add_sprite_list(
+            self.platform_list,
+            friction=DYNAMIC_ITEM_FRICTION,
+            collision_type="platform",
+            body_type=arcade.PymunkPhysicsEngine.KINEMATIC
+        )
+        
+
 
         self.setup_platforms()
 
         # add platforms moved by second player
+
         self.physics_engine.add_sprite_list(
-            self.platform_list,
+            self.controllable_platform_list,
             friction=DYNAMIC_ITEM_FRICTION,
             collision_type="platform",
             body_type=arcade.PymunkPhysicsEngine.KINEMATIC
@@ -838,6 +850,8 @@ class GameWindow(arcade.Window):
         self.background_list.draw()
         self.wall_list.draw()
         self.platform_list.draw()
+        if LEVELS[self.current_level]['mechanics'] == MECHANICS.PLATFORMS:
+            self.controllable_platform_list.draw()
         self.item_list.draw()
         self.spawned_item_list.draw()
         self.player_list.draw()
