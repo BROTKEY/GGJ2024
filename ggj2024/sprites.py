@@ -105,6 +105,11 @@ class PlayerSprite(arcade.Sprite):
             if self.cur_texture > 7:
                 self.cur_texture = 0
             self.texture = self.walk_textures[self.cur_texture][self.character_face_direction]
+    
+    def jump(self, physics_engine):
+        if physics_engine.is_on_ground(self):
+            impulse = (0, PLAYER_JUMP_IMPULSE)
+            physics_engine.apply_impulse(self, impulse)
 
 
 class PhysicsSprite(arcade.Sprite):

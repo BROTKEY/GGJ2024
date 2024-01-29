@@ -2,6 +2,7 @@ import pathlib
 import random
 import arcade
 import pymunk
+import pyglet.input
 
 import numpy as np
 from PIL import Image
@@ -139,8 +140,19 @@ class GameWindow(arcade.Window):
 
         self.active_theme = None
 
+        self.controller: Optional[pyglet.input.Controller] = None
+
     def setup(self):
         """ Set up everything with the game """
+        controllers = pyglet.input.get_controllers()
+        print(f'Found {len(controllers)} controllers')
+        for controller in controllers:
+            print(controller)
+        if controllers:
+            print(f'Choosing first controller')
+            self.controller = controller
+            self.controller.open()
+
         self.spawnable_assets = [str(fn) for fn in Path('assets/AFOPNGS/').glob('*.png')]
 
         # Create the sprite lists
@@ -171,6 +183,23 @@ class GameWindow(arcade.Window):
         self.damping = DEFAULT_DAMPING
 
         self.load_level(self.current_level)
+
+        @self.controller.event
+        def on_button_press(*args):
+            return self.on_controller_button_pressed(*args)
+        @self.controller.event
+        def on_button_release(*args):
+            return self.on_controller_button_released(*args)
+        @self.controller.event
+        def on_trigger_motion(*args):
+            return self.on_controller_trigger_motion(*args)
+        @self.controller.event
+        def on_stick_motion(*args):
+            return self.on_controller_stick_motion(*args)
+        @self.controller.event
+        def on_dpad_motion(*args):
+            return self.on_controller_dpad_motion(*args)
+            
 
     def setup_platforms(self):
         # player-controlled platforms
@@ -549,12 +578,16 @@ class GameWindow(arcade.Window):
         self.physics_engine.add_sprite(sprite, mass, friction, elasticity, collision_type='item',
                                        max_velocity=ITEM_MAX_VELOCITY)
         
+    @property
+    def current_mechanics(self):
+        return LEVELS[self.current_level]['mechanics']
 
     # TODO: combinations of direction buttons could be done better, this is just for testing
     def update_gravity(self):
-        if not LEVELS[self.current_level]['mechanics'] == MECHANICS.GRAVITY:
+        if not self.current_mechanics == MECHANICS.GRAVITY:
             return
 
+        new_grav = None
         if self.debug:
             pass
             # TODO: maybe also make mouse controlled gravity an optional feature and include this one again?
@@ -585,11 +618,16 @@ class GameWindow(arcade.Window):
                 fists_shown = self.hands.left_hand.grab_angle > FIST_THRESHOLD and self.hands.right_hand.grab_angle > FIST_THRESHOLD
                 if fists_shown:
                     new_grav = -new_grav
+            elif self.controller:
+                stick_dir = pymunk.Vec2d(self.controller.rightx, self.controller.righty)
+                if stick_dir.length > CONTROLLER_STICK_GRAVITY_DEADZONE:
+                    new_grav = stick_dir.normalized() * 2000
             else:
                 new_grav = np.array([SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2]) - np.array(self.last_mouse_position)
                 new_grav = normalize_vector(new_grav) * GRAVITY
 
-        self.main_gravity = new_grav
+        if new_grav:
+            self.main_gravity = new_grav
 
     def update_platforms(self):
         if not LEVELS[self.current_level]['mechanics'] == MECHANICS.PLATFORMS:
@@ -624,6 +662,36 @@ class GameWindow(arcade.Window):
                     ry = self.hands.right_hand.y
                     pos = (self.camera.position.x + self.width/2 + rx, self.camera.position.y + ry)
                     self.physics_engine.set_position(self.platform_right, pos)
+
+        elif self.controller:
+            lt = self.controller.lefttrigger < CONTROLLER_TRIGGER_PLATFORM_THRESHOLD
+            rt = self.controller.righttrigger < CONTROLLER_TRIGGER_PLATFORM_THRESHOLD
+            cx = self.controller.rightx * CONTROLLER_PLATFORM_MULTIPLIER
+            cy = self.controller.righty * CONTROLLER_PLATFORM_MULTIPLIER
+            if self.platform_left:
+                if not self.platform_left_collision and lt:
+                    self.platform_left_collision = True
+                    self.platform_left.set_opaque(True)
+                if self.platform_left_collision and not lt:
+                    self.platform_left_collision = False
+                    self.platform_left.set_opaque(False)
+
+                if not self.platform_left_collision:
+                    pos = (self.camera.position.x + self.width/2 + cx, self.camera.position.y + self.height/2 + cy)
+                    self.physics_engine.set_position(self.platform_left, pos)
+
+            if self.platform_right:
+                if not self.platform_right_collision and rt:
+                    self.platform_right_collision = True
+                    self.platform_right.set_opaque(True)
+                if self.platform_right_collision and not rt:
+                    self.platform_right_collision = False
+                    self.platform_right.set_opaque(False)
+
+                if not self.platform_right_collision:
+                    pos = (self.camera.position.x + self.width/2 + cx, self.camera.position.y + self.height/2 + cy)
+                    self.physics_engine.set_position(self.platform_right, pos)
+
         else:
             # update platform position based on mouse input
             if self.platform_left:
@@ -664,13 +732,7 @@ class GameWindow(arcade.Window):
             case arcade.key.SPACE:
                 self.space_pressed = True
                 # find out if player is standing on ground
-                if self.physics_engine.is_on_ground(self.player_sprite):
-                    if FORCES_RELATIVE_TO_PLAYER:
-                        impulse = (0, PLAYER_JUMP_IMPULSE)
-                    else:
-                        impulse = -self.main_gravity_dir * PLAYER_JUMP_IMPULSE
-                        impulse = tuple(impulse)
-                    self.physics_engine.apply_impulse(self.player_sprite, impulse)
+                self.player_sprite.jump(self.physics_engine)
 
             case arcade.key.ENTER:
                 self.enter_pressed = True
@@ -760,10 +822,83 @@ class GameWindow(arcade.Window):
             self.last_mouse_position_right = (x, y)
         self.last_mouse_position = (x, y)
 
+    def on_controller_button_pressed(self, controller, button):
+        match button:
+            case 'a':
+                self.player_sprite.jump(self.physics_engine)
+            case 'b':
+                self.player_sprite.jump(self.physics_engine)
+                pass
+            case 'x':
+                pass
+            case 'y':
+                pass
+            case _:
+                print('Unknown button', button, 'pressed')
+    
+    def on_controller_button_released(self, controller, button):
+        match button:
+            case 'a':
+                pass
+            case 'b':
+                pass
+            case 'x':
+                pass
+            case 'y':
+                pass
+            case _:
+                print('Unknown button', button, 'released')
+    
+    def on_controller_stick_motion(self, controller, name, x_val, y_val):
+        # print('moved', name, x_val, y_val)
+        match name:
+            case 'leftstick':
+                if x_val > CONTROLLER_STICK_WALK_DEADZONE:
+                    self.d_pressed = True
+                elif x_val < -CONTROLLER_STICK_WALK_DEADZONE:
+                    self.a_pressed = True
+                else:
+                    self.a_pressed = self.d_pressed = False
+            case 'rightstick':
+                pass
+                # elif self.current_mechanics == MECHANICS.PLATFORMS:
+                #     if not self.platform_left_collision:
+                #         lx = x_val
+                #         ly = y_val
+                #         pos = (self.camera.position.x + self.width/2 + lx, self.camera.position.y + ly)
+                #         self.physics_engine.set_position(self.platform_left, pos)
+    
+    def on_controller_trigger_motion(self, controller, name, value):
+        pass
+        # match name:
+        #     case 'lefttrigger':
+        #         if self.platform_left:
+        #             if not self.platform_left_collision and value >= CONTROLLER_TRIGGER_PLATFORM_THRESHOLD:
+        #                 self.platform_left_collision = True
+        #                 self.platform_left.set_opaque(True)
+        #             if self.platform_left_collision and value < CONTROLLER_TRIGGER_PLATFORM_THRESHOLD:
+        #                 self.platform_left_collision = False
+        #                 self.platform_left.set_opaque(False)
+        #     case 'righttrigger':
+        #         if self.platform_right:
+        #             if not self.platform_right_collision and value >= CONTROLLER_TRIGGER_PLATFORM_THRESHOLD:
+        #                 self.platform_right_collision = True
+        #                 self.platform_right.set_opaque(True)
+        #             if self.platform_right_collision and value < CONTROLLER_TRIGGER_PLATFORM_THRESHOLD:
+        #                 self.platform_right_collision = False
+        #                 self.platform_right.set_opaque(False)
+
+    def on_controller_dpad_motion(self, controller, left, right, up, down):
+        print('dpad', left, right, up, down)
+    
+
     def on_update(self, delta_time):
         """ Movement and game logic """
         if self.mark_player_dead:
             self.kill_player(self.mark_player_dead)
+
+        # Platform controller controls
+        
 
         # Rotate player to gravity
         player_object = self.physics_engine.get_physics_object(self.player_sprite)
@@ -846,7 +981,6 @@ class GameWindow(arcade.Window):
         Anything between 0 and 1 will have the camera move to the location with a smoother
         pan.
         """
-
         map_bounds = np.array([self.map_bounds_x, self.map_bounds_y])
         camera_size = np.array([self.camera.viewport_width, self.camera.viewport_height])
 

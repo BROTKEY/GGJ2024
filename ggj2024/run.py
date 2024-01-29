@@ -2,7 +2,7 @@ import arcade
 import argparse
 
 from ggj2024.gamewindow import GameWindow
-from ggj2024.config import SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE
+from ggj2024.config import *
 
 
 def main():
