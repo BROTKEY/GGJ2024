@@ -6,19 +6,21 @@ class Hand:
     x = 0
     y = 0
     z = 0
+    grab_angle = 0
 
-    def __init__(self, x: float, y: float, z: float):
+    def __init__(self, x: float, y: float, z: float, grab_angle: float):
         self.x = x
         self.y = y
         self.z = z
+        self.grab_angle = grab_angle
 
     def __str__(self):
-        return "x: {}\t\ty: {}\t\tz: {}".format(self.x, self.y, self.z)
+        return "x: {}\t\ty: {}\t\tz: {}\t\t grab angle:{}".format(self.x, self.y, self.z, self.grab_angle)
 
 
 class HandReceiver:
-    left_hand: Hand = Hand(0, 0, 0)
-    right_hand: Hand = Hand(0, 0, 0)
+    left_hand: Hand = Hand(0, 0, 0, 0)
+    right_hand: Hand = Hand(0, 0, 0, 0)
     run = True
 
     def __init__(self, addr="127.0.0.1", port=42069):
@@ -37,10 +39,10 @@ class HandReceiver:
             self.sock.send(b"OK")
 
             data = str(data, "utf-8")
-            left_hand, right_hand = data.split("|")
+            left_hand, right_hand, left_hand_grab_angle, right_hand_grab_angle = data.split("|")
 
-            self.left_hand = Hand(*[float(i) for i in left_hand.split(";")])
-            self.right_hand = Hand(*[float(i) for i in right_hand.split(";")])
+            self.left_hand = Hand(*[float(i) for i in left_hand.split(";")], float(left_hand_grab_angle))
+            self.right_hand = Hand(*[float(i) for i in right_hand.split(";")], float(right_hand_grab_angle))
 
     def stop(self):
         self.run = False
