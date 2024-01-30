@@ -11,7 +11,17 @@ import time
 from typing import Optional
 from enum import Enum
 
-from ggj2024.HandReceiver import HandReceiver
+try: 
+    import leap
+    LEAP_AVAILABLE = True
+except ImportError:
+    LEAP_AVAILABLE = False
+
+if LEAP_AVAILABLE:
+    from ggj2024.HandReceiver import HandReceiver
+else:
+    from ggj2024.HandReceiver import HandReceiverBase as HandReceiver
+
 from ggj2024.config import *
 from ggj2024.utils import normalize_vector, rotate90_cw, rotate90_ccw
 from ggj2024.sprites import ParticleSprite, PlayerSprite, PhysicsSprite, ControllablePlatformSprite, DummyBoxSprite
@@ -27,7 +37,7 @@ class MECHANICS(Enum):
 LEVELS = {
     1: {
         'tilemap': arcade.load_tilemap("resources/tiled_maps/Level1.json",
-                                         SPRITE_SCALING_TILES),
+                                       SPRITE_SCALING_TILES),
         'theme': arcade.load_sound('resources/sound/theme_calm.mp3', False),
         'mechanics': MECHANICS.PLATFORMS
     },
@@ -51,14 +61,18 @@ LEVELS = {
     },
 }
 
+
 class GameWindow(arcade.Window):
     """ Main Window """
 
-    def __init__(self, width, height, title, leap_motion=True):
+    def __init__(self, width, height, title, leap_motion=True, debug=False):
         """ Create the variables """
 
         # Init the parent class
         super().__init__(width, height, title)
+
+        self.leap_motion = leap_motion
+        self.debug = debug
 
         # Physics engine
         self.physics_engine: Optional[arcade.PymunkPhysicsEngine] = None
@@ -98,7 +112,7 @@ class GameWindow(arcade.Window):
         self.up_pressed: bool = False
         self.down_pressed: bool = False
 
-        self.hands = HandReceiver()#
+        self.hands = HandReceiver()
 
         self.splatter_texture_dict: dict[arcade.Sprite, Image.Image] = dict()
         self.splatter_counter = 0
@@ -110,7 +124,6 @@ class GameWindow(arcade.Window):
 
         self.current_level = 1
         self.respawn_player = False
-        self.leap_motion = leap_motion
         self.level_transition = False
 
         # Loading the audio file
@@ -133,7 +146,6 @@ class GameWindow(arcade.Window):
         self.platform_list = arcade.SpriteList()
 
         self.mark_player_dead = None
-
 
         # Used for dragging shapes around with the mouse
         self.last_mouse_position = 0, 0
@@ -537,11 +549,24 @@ class GameWindow(arcade.Window):
         
 
     # TODO: combinations of direction buttons could be done better, this is just for testing
-    def update_gravity(self, hand_gesture_update=False):
+    def update_gravity(self):
         if not LEVELS[self.current_level]['mechanics'] == MECHANICS.GRAVITY:
             return
 
-        if hand_gesture_update:
+        if self.debug:
+            pass
+            # TODO: maybe also make mouse controlled gravity an optional feature and include this one again?
+            # # This one will set gravity to 0 if two opposite keys are pressed, is this good...?
+            # new_grav = np.array([0, 0], dtype='float')
+            # if self.left_pressed and not self.right_pressed:
+            #     new_grav[0] = -GRAVITY
+            # elif self.right_pressed and not self.left_pressed:
+            #     new_grav[0] = GRAVITY
+            # if self.up_pressed and not self.down_pressed:
+            #     new_grav[1] = GRAVITY
+            # elif self.down_pressed and not self.up_pressed:
+            #     new_grav[1] = -GRAVITY
+        else:
             if self.leap_motion:
                 left_hand = (self.hands.left_hand.x, self.hands.left_hand.y)
                 right_hand = (self.hands.right_hand.x, self.hands.right_hand.y)
@@ -561,17 +586,6 @@ class GameWindow(arcade.Window):
             else:
                 new_grav = np.array([SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2]) - np.array(self.last_mouse_position)
                 new_grav = normalize_vector(new_grav) * GRAVITY
-        else:
-            # This one will set gravity to 0 if two opposite keys are pressed, is this good...?
-            new_grav = np.array([0, 0], dtype='float')
-            if self.left_pressed and not self.right_pressed:
-                new_grav[0] = -GRAVITY
-            elif self.right_pressed and not self.left_pressed:
-                new_grav[0] = GRAVITY
-            if self.up_pressed and not self.down_pressed:
-                new_grav[1] = GRAVITY
-            elif self.down_pressed and not self.up_pressed:
-                new_grav[1] = -GRAVITY
 
         self.main_gravity = new_grav
 
@@ -662,18 +676,19 @@ class GameWindow(arcade.Window):
 
             case arcade.key.DELETE:
                 self.mark_player_dead = 'keyboard'
+
         if key == arcade.key.LEFT:
             self.left_pressed = True
-            self.update_gravity()
+            # self.update_gravity()
         elif key == arcade.key.RIGHT:
             self.right_pressed = True
-            self.update_gravity()
+            # self.update_gravity()
         elif key == arcade.key.UP:
             self.up_pressed = True
-            self.update_gravity()
+            # self.update_gravity()
         elif key == arcade.key.DOWN:
             self.down_pressed = True
-            self.update_gravity()
+            # self.update_gravity()
 
     def on_key_release(self, key, modifiers):
         """Called when the user releases a key. """
@@ -701,7 +716,7 @@ class GameWindow(arcade.Window):
 
     def on_mouse_press(self, x, y, button, modifiers):
         """ Called whenever the mouse button is clicked. """
-        if self.leap_motion:
+        if not self.debug:
             # mouse interaction is only required when debugging
             return
 
@@ -726,7 +741,7 @@ class GameWindow(arcade.Window):
                 # self.physics_engine.add_sprite(sprite, body.mass)
 
     def on_mouse_release(self, x, y, button, modifiers):
-        if self.leap_motion:
+        if not self.debug:
             # mouse interaction is only required when debugging
             return
 
@@ -801,13 +816,13 @@ class GameWindow(arcade.Window):
                 new_particle_list.append(blood)
         self.particle_list = new_particle_list
 
-        self.update_gravity(hand_gesture_update=True)
+        self.update_gravity()
         self.update_platforms()
         for entity in self.entities:
             entity.update()
 
         # Move items in the physics engine
-        for _ in range(0,STEPS_PER_FRAME):
+        for temp in range(0,STEPS_PER_FRAME):
             self.physics_engine.step(delta_time=1/(60*STEPS_PER_FRAME))
 
         x_inbounds = (0 <= self.player_sprite.center_x <= self.map_bounds_x)
