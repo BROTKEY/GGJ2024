@@ -127,9 +127,11 @@ class GameWindow(arcade.Window):
         self.level_transition = False
 
         # Loading the audio file
-        hit_sound_files = list(pathlib.Path('resources/sound/animal').glob('*.wav')) + list(pathlib.Path('resources/sound/kenney_impact-sounds/Audio/').glob('*.ogg'))
-        max_hitsounds = min(10, len(hit_sound_files))
+        hit_sound_files = list(pathlib.Path('resources/sound/kenney_impact-sounds/Audio/').glob('*.ogg'))
+        animal_sound_files = list(pathlib.Path('resources/sound/animal').glob('*.wav'))
+        max_hitsounds = min(20, len(hit_sound_files))
         self.audio_hits = [arcade.load_sound(file, False) for file in hit_sound_files[:max_hitsounds]]
+        self.audio_animals = [arcade.load_sound(file, False) for file in animal_sound_files]
 
         self.start_tile: arcade.Sprite = None
         self.start_center: tuple[int, int] = None
@@ -160,8 +162,6 @@ class GameWindow(arcade.Window):
         # Add to player sprite list
         self.player_list.append(self.player_sprite)
 
-        # --- Pymunk Physics Engine Setup ---
-
         # The default damping for every object controls the percent of velocity
         # the object will keep each second. A value of 1.0 is no speed loss,
         # 0.9 is 10% per second, 0.1 is 90% per second.
@@ -169,9 +169,6 @@ class GameWindow(arcade.Window):
         # For platformers with gravity, this should probably be set to 1.0.
         # Default value is 1.0 if not specified.
         self.damping = DEFAULT_DAMPING
-
-        # Set the gravity. (0, 0) is good for outer space and top-down.
-        # gravity = (0, -GRAVITY)
 
         self.load_level(self.current_level)
 
@@ -367,36 +364,29 @@ class GameWindow(arcade.Window):
 
         # Collisions
         def handle_player_wall_collision(player_sprite: PlayerSprite, wall_sprite: arcade.sprite, arbiter: pymunk.Arbiter, space, data):
-            impulse: pymunk.Vec2d = arbiter.total_impulse
             if self.mark_player_dead:
                 return False
-            if impulse.length > 500:
-                # print('wall collision, impulse =', impulse.length)
-                hit_sound = random.choice(self.audio_hits)
-                arcade.play_sound(hit_sound, 1.0, -1, False)
+            self.play_collision_hit_sound(arbiter)
+            impulse: pymunk.Vec2d = arbiter.total_impulse
             if impulse.length > PLAYER_DEATH_IMPULSE:
                 print(f'died from wall (impulse={impulse.length})')
                 self.mark_player_dead = 'Wall'
             return True
 
         def handle_player_item_collision(player_sprite: PlayerSprite, item_sprite: arcade.Sprite, arbiter: pymunk.Arbiter, space, data):
-            impulse: pymunk.Vec2d = arbiter.total_impulse
             if self.mark_player_dead:
                 return False
-            if impulse.length > 500:
-                # print('object collision, impulse =', impulse.length)
-                hit_sound = random.choice(self.audio_hits)
-                arcade.play_sound(hit_sound, 1.0, -1, False)
+            self.play_collision_hit_sound(arbiter)
+            impulse: pymunk.Vec2d = arbiter.total_impulse
             if impulse.length > PLAYER_DEATH_IMPULSE:
                 print(f'died from item (impulse={impulse.length})')
                 self.mark_player_dead = 'Item'
             return True
 
         def handle_player_finish_collision(player: PlayerSprite, finish: arcade.Sprite, arbiter: pymunk.Arbiter, space, data):
-            # TODO level done
             print('Congratulations, you reached the goal!')
-            # return False to cancel collisions
             self.level_transition = True
+            # return False to cancel collisions
             return False
 
         def handle_platform_collision(player: PlayerSprite, platform: arcade.Sprite, arbiter: pymunk.Arbiter, space, data):
@@ -413,6 +403,11 @@ class GameWindow(arcade.Window):
         self.physics_engine.add_collision_handler('player', 'platform', begin_handler=handle_platform_collision)
         self.physics_engine.add_collision_handler('item', 'platform', begin_handler=handle_platform_collision)
 
+        def handle_item_wall_collision(item: arcade.Sprite, wall: arcade.Sprite, arbiter: pymunk.Arbiter, space, data):
+            self.play_collision_hit_sound(arbiter)
+
+        self.physics_engine.add_collision_handler('item', 'wall', post_handler=handle_item_wall_collision)
+        self.physics_engine.add_collision_handler('item', 'item', post_handler=handle_item_wall_collision)
 
         def handle_particle_x_collision(particle: ParticleSprite, other: arcade.Sprite, arbiter: pymunk.Arbiter, space, data):
             # HACK: store old width and height, reset them after changing the texture
@@ -460,10 +455,6 @@ class GameWindow(arcade.Window):
             other.texture = texture
             other.width, other.height = old_w, old_h
 
-        def handle_particle_background_collision(*args, **kwargs):
-            if np.random.rand() > 0.7:
-                return handle_particle_x_collision(*args, **kwargs)
-
         self.physics_engine.add_collision_handler('particle', 'wall', post_handler=handle_particle_x_collision)
         self.physics_engine.add_collision_handler('particle', 'item', post_handler=handle_particle_x_collision)
         self.physics_engine.add_collision_handler('particle', 'background', post_handler=handle_particle_x_collision, 
@@ -509,7 +500,8 @@ class GameWindow(arcade.Window):
 
     def kill_player(self, reason):
         print('Player died:', reason)
-        # Add 25 particles
+        self.play_random_sound(self.audio_animals, volume=0.8)
+        # Add particles
         x, y = self.player_sprite.position
         particle_mass = 0.5
         for i in range(BLOOD_PER_SPLATTER):
@@ -523,6 +515,16 @@ class GameWindow(arcade.Window):
                                              self.start_center)
 
         self.mark_player_dead = None
+
+    def play_random_sound(self, sounds,  volume: float = 1.0):
+        hit_sound = random.choice(sounds)
+        arcade.play_sound(hit_sound, volume, -1, False)
+
+    def play_collision_hit_sound(self, arbiter: pymunk.Arbiter):
+        p = arbiter.total_impulse.length
+        if p > HITSOUND_MIN_IMPULSE:
+            vol = (p - HITSOUND_MIN_IMPULSE) / HITSOUND_RANGE
+            self.play_random_sound(self.audio_hits, min(1.0, vol))
 
     def spawn_item(self, filename, center_x, center_y, width, height, mass=5.0, friction=0.2, elasticity=None):
         """Spawn one of the diversifier items into the scene"""
