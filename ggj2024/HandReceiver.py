@@ -18,12 +18,20 @@ class Hand:
         return "x: {}\t\ty: {}\t\tz: {}\t\t grab angle:{}".format(self.x, self.y, self.z, self.grab_angle)
 
 
-class HandReceiver:
-    left_hand: Hand = Hand(0, 0, 0, 0)
-    right_hand: Hand = Hand(0, 0, 0, 0)
-    run = True
+class HandReceiverBase:
+    """Base class for all hand receivers. Also functions as dummy class if no hand receiver is installed"""
+    def __init__(self, *args, **kwargs):
+        self.left_hand: Hand = Hand(0, 0, 0, 0)
+        self.right_hand: Hand = Hand(0, 0, 0, 0)
+        self.run = True
 
+    def stop(self):
+        pass
+
+
+class HandReceiver(HandReceiverBase):
     def __init__(self, addr="127.0.0.1", port=42069):
+        super().__init__()
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((addr, port))
         self.recv_thread = threading.Thread(target=self.data_receiver)
