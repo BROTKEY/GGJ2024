@@ -24,7 +24,7 @@ else:
     from ggj2024.HandReceiver import HandReceiverBase as HandReceiver
 
 from ggj2024.config import *
-from ggj2024.utils import normalize_vector, rotate90_cw, rotate90_ccw
+from ggj2024.utils import *
 from ggj2024.sprites import ParticleSprite, PlayerSprite, PhysicsSprite, ControllablePlatformSprite, DummyBoxSprite
 from ggj2024.itemspawner import ItemSpawner, Entity
 from ggj2024.region import Region
@@ -457,28 +457,23 @@ class GameWindow(arcade.Window):
             self.splatter_counter += 1
             scale_x = image.width / other.width
             scale_y = image.height / other.height
-            splatter = particle.texture.image
-            splat_size = int(5*particle.radius)
-            splatter = splatter.resize((splat_size, splat_size))
-            # contact_rel *= scale
+            splatter_radius = particle.radius * BLOOD_WALL_SIZE_MULTIPLIER
             # Make it apply to a little bit smaller region so that particles will be visible
             x = contact_rel.x * scale_x
             y = image.height - contact_rel.y * scale_y
-            x -= splat_size/2
-            y -= splat_size/2
-            x = 0.95 * x
-            y = 0.95 * y
+            x -= splatter_radius
+            y -= splatter_radius
+            x = 0.9 * x
+            y = 0.9 * y
             x += 0.05 * image.width
             y += 0.05 * image.height
             x = int(x)
             y = int(y)
-            # Create alpha mask of original image, multiply it with that
-            alphamask = np.array(image)[:,:,3:4].astype('float')/255.
-            alphamask = np.ceil(alphamask)
-            image.paste(splatter, (x, y, x+splat_size, y+splat_size), splatter)
-            pixdata = np.array(image)
-            masked = pixdata * alphamask
-            image = Image.fromarray(masked.astype('uint8'))
+            splatter = create_circle_image(splatter_radius * 2, particle.color, BLOOD_WALL_ANTIALIASING)
+            src = np.array(splatter).astype('float') / 255
+            dest = np.array(image).astype('float') / 255
+            new_img = alpha_composite(dest, src, (x, y), inplace=True, mask_fg_with_bg=True) * 255
+            image = Image.fromarray(new_img.astype('uint8'))
             self.splatter_texture_dict[other] = image
             texture = arcade.Texture(tex_name, image)
             other.texture = texture
