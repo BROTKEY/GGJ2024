@@ -1,16 +1,17 @@
+import time
 import pathlib
+from pathlib import Path
 import random
+import traceback
+from typing import Optional
+from enum import Enum
+
 import arcade
 import pymunk
 import pyglet.input
 
 import numpy as np
 from PIL import Image
-from pathlib import Path
-import time
-
-from typing import Optional
-from enum import Enum
 
 try: 
     import leap
@@ -263,7 +264,7 @@ class GameWindow(arcade.Window):
         self.finish_list = tile_map.sprite_lists.get('Finish') or arcade.SpriteList()
         map_entities = tile_map.sprite_lists.get('Entities') or []
         map_objects = tile_map.object_lists.get('Regions') or []
-
+        
         # Get player start from level
         start_sprite_list = tile_map.sprite_lists.get('Start')
         if start_sprite_list:
@@ -440,44 +441,53 @@ class GameWindow(arcade.Window):
 
         def handle_particle_x_collision(particle: ParticleSprite, other: arcade.Sprite, arbiter: pymunk.Arbiter, space, data):
             # HACK: store old width and height, reset them after changing the texture
-            old_w, old_h = other.width, other.height
-            self.physics_engine.remove_sprite(particle)
-            self.particle_list.remove(particle)
-            # position yields center of object, we need corner
-            other_pos = pymunk.Vec2d(
-                other.position[0] - other.width/2,
-                other.position[1] - other.height/2)
-            contact: pymunk.ContactPoint = arbiter.contact_point_set.points[0].point_b
-            contact_rel: pymunk.Vec2d = contact - other_pos
-            if other in self.splatter_texture_dict:
-                image = self.splatter_texture_dict[other]
-            else:
-                image = other.texture.image.copy()
-            tex_name = f'splatter_{self.splatter_counter}'
-            self.splatter_counter += 1
-            scale_x = image.width / other.width
-            scale_y = image.height / other.height
-            splatter_radius = particle.radius * BLOOD_WALL_SIZE_MULTIPLIER
-            # Make it apply to a little bit smaller region so that particles will be visible
-            x = contact_rel.x * scale_x
-            y = image.height - contact_rel.y * scale_y
-            x -= splatter_radius
-            y -= splatter_radius
-            x = 0.9 * x
-            y = 0.9 * y
-            x += 0.05 * image.width
-            y += 0.05 * image.height
-            x = int(x)
-            y = int(y)
-            splatter = create_circle_image(splatter_radius * 2, particle.color, BLOOD_WALL_ANTIALIASING)
-            src = np.array(splatter).astype('float') / 255
-            dest = np.array(image).astype('float') / 255
-            new_img = alpha_composite(dest, src, (x, y), inplace=True, mask_fg_with_bg=True) * 255
-            image = Image.fromarray(new_img.astype('uint8'))
-            self.splatter_texture_dict[other] = image
-            texture = arcade.Texture(tex_name, image)
-            other.texture = texture
-            other.width, other.height = old_w, old_h
+            # FIXME: sometimes the alpha_composite functions raises a ValueError when broadcasting shapes together, could not find the problem yet
+            try:
+                old_w, old_h = other.width, other.height
+                self.physics_engine.remove_sprite(particle)
+                self.particle_list.remove(particle)
+                # position yields center of object, we need corner
+                other_pos = pymunk.Vec2d(
+                    other.position[0] - other.width/2,
+                    other.position[1] - other.height/2)
+                contact: pymunk.ContactPoint = arbiter.contact_point_set.points[0].point_b
+                contact_rel: pymunk.Vec2d = contact - other_pos
+                if other in self.splatter_texture_dict:
+                    image = self.splatter_texture_dict[other]
+                else:
+                    image = other.texture.image.copy()
+                tex_name = f'splatter_{self.splatter_counter}'
+                self.splatter_counter += 1
+                scale_x = image.width / other.width
+                scale_y = image.height / other.height
+                splatter_radius = particle.radius * BLOOD_WALL_SIZE_MULTIPLIER
+                # Make it apply to a little bit smaller region so that particles will be visible
+                x = contact_rel.x * scale_x
+                y = image.height - contact_rel.y * scale_y
+                x -= splatter_radius
+                y -= splatter_radius
+                x = 0.9 * x
+                y = 0.9 * y
+                x += 0.05 * image.width
+                y += 0.05 * image.height
+                x = int(x)
+                y = int(y)
+                splatter = create_circle_image(splatter_radius * 2, particle.color, BLOOD_WALL_ANTIALIASING)
+                src = np.array(splatter).astype('float') / 255
+                dest = np.array(image).astype('float') / 255
+                new_img = alpha_composite(dest, src, (x, y), inplace=True, mask_fg_with_bg=True) * 255
+                image = Image.fromarray(new_img.astype('uint8'))
+                self.splatter_texture_dict[other] = image
+                texture = arcade.Texture(tex_name, image)
+                # FIXME: when spamming DEL key and creating lots of particle sprites, sometimes a pop from empty deque is raised
+                other.texture = texture
+                other.width, other.height = old_w, old_h
+            except ValueError:
+                print('Error in particle collision function')
+                print(traceback.format_exc())
+            except IndexError:
+                print('Error in particle collision function')
+                print(traceback.format_exc())
 
         self.physics_engine.add_collision_handler('particle', 'wall', post_handler=handle_particle_x_collision)
         self.physics_engine.add_collision_handler('particle', 'item', post_handler=handle_particle_x_collision)
