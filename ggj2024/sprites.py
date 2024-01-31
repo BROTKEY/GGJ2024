@@ -1,10 +1,12 @@
 import arcade
-
-from ggj2024.config import *
 import pymunk
+
 import numpy as np
 import time
+from PIL import Image, ImageDraw
 
+from ggj2024.config import *
+from ggj2024.utils import *
 
 
 class PlayerSprite(arcade.Sprite):
@@ -148,21 +150,18 @@ class DummyBoxSprite(PhysicsSprite):
 
 
 class ParticleSprite(arcade.Sprite):
-    PARTICLE_COUNT = 0
-    COLOR_VARIATION = 50
-
     def __init__(self, x, y, radius, mass=1, liftetime=BLOOD_LIFETIME):
-        self.texture_name = f'particle_{ParticleSprite.PARTICLE_COUNT}'
-        ParticleSprite.PARTICLE_COUNT += 1
-        color_var = int(np.random.random() * ParticleSprite.COLOR_VARIATION)
+        color_var = int(np.random.random() * BLOOD_COLOR_VARIATION)
         if np.random.rand() < 0.5:
             color = (255 - color_var, 0, 0)
         else:
             color = (255, color_var, color_var)
         diameter = int(2*radius)
-        texture = arcade.make_circle_texture(diameter, color, self.texture_name)
+        self.texture_name = f'particle_{diameter}_{color[0]}_{color[1]}_{color[2]}'
+        img = create_circle_image(diameter, color, BLOOD_PARTICLE_ANTIALIASING)
+        texture = arcade.Texture(self.texture_name, img)
+
         super().__init__(center_x=x, center_y=y, texture=texture)
         self.radius = radius
-        self.width = 2*radius
-        self.height = 2*radius
+        self.color = color
         self.killtime = time.time() + liftetime
