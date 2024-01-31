@@ -114,7 +114,7 @@
    </object>
   </objectgroup>
  </tile>
- <tile id="74">
+ <tile id="74" type="PlayerControlledPlatform">
   <image width="256" height="128" source="TILES/PlayerControlledPlatform.png"/>
   <objectgroup draworder="index" id="2">
    <object id="1" x="1.33333" y="44.3333" width="253.667" height="46.3333"/>
