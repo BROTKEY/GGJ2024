@@ -7,6 +7,15 @@ from PIL import Image, ImageDraw
 
 from ggj2024.config import *
 from ggj2024.utils import *
+from ggj2024.spriteset import Spriteset
+
+
+
+class SPRITESETS:
+    GENERAL: Spriteset = Spriteset.load('assets/General.tsx', 0)
+    ALL_FOR_ONE: Spriteset = Spriteset.load('assets/AllForOne.tsx', 0)
+    PLAYER_CONTROLLED_PLATFORMS = Spriteset.load('assets/PlayerControlledPlatforms.tsx', 0)
+
 
 
 class PlayerSprite(arcade.Sprite):
@@ -109,44 +118,25 @@ class PlayerSprite(arcade.Sprite):
             self.texture = self.walk_textures[self.cur_texture][self.character_face_direction]
 
 
-class PhysicsSprite(arcade.Sprite):
-    def __init__(self, pymunk_shape, filename):
-        super().__init__(filename, center_x=pymunk_shape.body.position.x, center_y=pymunk_shape.body.position.y)
-        self.pymunk_shape = pymunk_shape
+class PlayerControlledPlatformSprite(arcade.Sprite):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.tile_active = SPRITESETS.PLAYER_CONTROLLED_PLATFORMS.get_tiles_by_class('Active')[0]
+        self.tile_inactive = SPRITESETS.PLAYER_CONTROLLED_PLATFORMS.get_tiles_by_class('Inactive')[0]
+        self.texture_active = SPRITESETS.PLAYER_CONTROLLED_PLATFORMS.create_texture(self.tile_active)
+        self.texture_inactive = SPRITESETS.PLAYER_CONTROLLED_PLATFORMS.create_texture(self.tile_inactive)
+        self.active = False
 
-
-class ControllablePlatformSprite(PhysicsSprite):
-    def __init__(self, pymunk_shape):
-        filename_solid = 'assets/TILES/PlayerControlledPlatform.png'
-        self.texture_solid = arcade.load_texture(
-            filename_solid
-        )
-        self.texture_opaque = arcade.load_texture(
-            'assets/TILES/PlayerControlledPlatformOpague.png'
-        )
-
-        super().__init__(pymunk_shape, filename_solid)
-        self.set_opaque(True)
-
-    def set_opaque(self, value):
+    @property
+    def active(self):
+        return self._active
+    @active.setter
+    def active(self, value):
         if value:
-            self.texture = self.texture_solid
+            self.texture = self.texture_active
         else:
-            self.texture = self.texture_opaque
-        self.opaque = value
-
-
-class DummyBoxSprite(PhysicsSprite):
-    def __init__(self, x, y, size, mass):
-        moment = pymunk.moment_for_box(mass, (size, size))
-        body = pymunk.Body(mass, moment)
-        body.position = pymunk.Vec2d(x, y)
-        shape = pymunk.Poly.create_box(body, (size, size))
-        shape.elasticity = 0.2
-        shape.friction = 0.9
-        super().__init__(shape, ":resources:images/tiles/boxCrate_double.png")
-        self.width = size
-        self.height = size
+            self.texture = self.texture_inactive
+        self._active = value
 
 
 class ParticleSprite(arcade.Sprite):

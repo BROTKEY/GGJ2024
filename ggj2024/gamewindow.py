@@ -25,7 +25,7 @@ else:
 
 from ggj2024.config import *
 from ggj2024.utils import *
-from ggj2024.sprites import ParticleSprite, PlayerSprite, PhysicsSprite, ControllablePlatformSprite, DummyBoxSprite
+from ggj2024.sprites import ParticleSprite, PlayerControlledPlatformSprite, PlayerSprite, SPRITESETS
 from ggj2024.itemspawner import ItemSpawner, Entity
 from ggj2024.region import Region
 
@@ -86,7 +86,7 @@ class GameWindow(arcade.Window):
         self.wall_list: Optional[arcade.SpriteList] = None
         self.item_list: Optional[arcade.SpriteList] = None
         self.moving_sprites_list: Optional[arcade.SpriteList] = None
-        self.platform_list: Optional[arcade.SpriteList] = None
+        # self.platform_list: Optional[arcade.SpriteList] = None
         self.controllable_platform_list: Optional[arcade.SpriteList] = None
         self.particle_list: Optional[arcade.SpriteList] = None
         self.background_list: Optional[arcade.SpriteList] = None
@@ -140,13 +140,16 @@ class GameWindow(arcade.Window):
 
         self.active_theme = None
 
+        self.platform_left: PlayerControlledPlatformSprite = None
+        self.platform_right: PlayerControlledPlatformSprite = None
+
     def setup(self):
         """ Set up everything with the game """
         self.spawnable_assets = [str(fn) for fn in Path('assets/AFOPNGS/').glob('*.png')]
 
         # Create the sprite lists
         self.player_list = arcade.SpriteList()
-        self.platform_list = arcade.SpriteList()
+        # self.platform_list = arcade.SpriteList()
 
         self.mark_player_dead = None
 
@@ -175,27 +178,30 @@ class GameWindow(arcade.Window):
 
     def setup_platforms(self):
         # player-controlled platforms
-        size = 64
-        mass = 1.0
 
         self.controllable_platform_list = arcade.SpriteList()
+        tiles = SPRITESETS.GENERAL.get_tiles_by_class('PlayerControlledPlatform')
+        if not tiles:
+            raise RuntimeError('Could not find tile for PlayerControlledPlaform')
+        elif len(tiles) > 1:
+            print('WARNING: More than one PlayerControlledPlatform tile defined')
+        tile = tiles[0]
         for i in range(2):
-            x = 10 + size * i
-            y = 10
-            moment = pymunk.moment_for_box(mass, (size, 2*size))
-            body = pymunk.Body(mass, moment)
-            body.position = pymunk.Vec2d(x, y)
-            shape = pymunk.Poly.create_box(body, (size, 2*size))
-            shape.elasticity = 0.2
-            shape.friction = 0.9
-            sprite = ControllablePlatformSprite(shape)#, ":resources:images/tiles/boxCrate_double.png", width=2*size, height=size)
+            sprite = SPRITESETS.GENERAL.create_sprite(tile, custom_class=PlayerControlledPlatformSprite)
             self.controllable_platform_list.append(sprite)
 
         self.platform_left = self.controllable_platform_list[0]
         self.platform_right = self.controllable_platform_list[1]
 
-        self.platform_left_collision = False
-        self.platform_right_collision = False
+        if self.debug:
+            # self.platform_left_collision = True
+            # self.platform_right_collision = True
+            self.platform_left.active = True
+            self.platform_right.active = True
+        # else:
+        #     self.platform_left_collision = False
+        #     self.platform_right_collision = False
+
 
     def load_level(self, level):
         self.current_level = level
@@ -343,12 +349,12 @@ class GameWindow(arcade.Window):
         self.physics_engine.add_sprite_list(self.finish_list,
                                             collision_type='finish',
                                             body_type=arcade.PymunkPhysicsEngine.STATIC)
-        self.physics_engine.add_sprite_list(
-            self.platform_list,
-            friction=DYNAMIC_ITEM_FRICTION,
-            collision_type="platform",
-            body_type=arcade.PymunkPhysicsEngine.KINEMATIC
-        )
+        # self.physics_engine.add_sprite_list(
+        #     self.platform_list,
+        #     friction=DYNAMIC_ITEM_FRICTION,
+        #     collision_type="platform",
+        #     body_type=arcade.PymunkPhysicsEngine.KINEMATIC
+        # )
         
 
 
@@ -390,12 +396,8 @@ class GameWindow(arcade.Window):
             # return False to cancel collisions
             return False
 
-        def handle_platform_collision(player: PlayerSprite, platform: arcade.Sprite, arbiter: pymunk.Arbiter, space, data):
-            if platform == self.platform_left and self.platform_left_collision:
-                return True
-            if platform == self.platform_right and self.platform_right_collision:
-                return True
-            return False
+        def handle_platform_collision(player: PlayerSprite, platform: PlayerControlledPlatformSprite, arbiter: pymunk.Arbiter, space, data):
+            return platform.active
 
         self.physics_engine.add_collision_handler('player', 'wall', post_handler=handle_player_wall_collision)
         self.physics_engine.add_collision_handler('player', 'item', post_handler=handle_player_item_collision)
@@ -555,15 +557,15 @@ class GameWindow(arcade.Window):
                                        max_velocity=ITEM_MAX_VELOCITY)
         
 
-    # TODO: combinations of direction buttons could be done better, this is just for testing
     def update_gravity(self):
         if not LEVELS[self.current_level]['mechanics'] == MECHANICS.GRAVITY:
             return
+        new_grav = None
 
         if self.debug:
             pass
             # TODO: maybe also make mouse controlled gravity an optional feature and include this one again?
-            # # This one will set gravity to 0 if two opposite keys are pressed, is this good...?
+            # This one will set gravity to 0 if two opposite keys are pressed, is this good...?
             # new_grav = np.array([0, 0], dtype='float')
             # if self.left_pressed and not self.right_pressed:
             #     new_grav[0] = -GRAVITY
@@ -593,50 +595,69 @@ class GameWindow(arcade.Window):
             else:
                 new_grav = np.array([SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2]) - np.array(self.last_mouse_position)
                 new_grav = normalize_vector(new_grav) * GRAVITY
-
-        self.main_gravity = new_grav
+        if new_grav is not None:
+            self.main_gravity = new_grav
 
     def update_platforms(self):
         if not LEVELS[self.current_level]['mechanics'] == MECHANICS.PLATFORMS:
             return
 
-        if self.leap_motion:
-            # update platform positions based on second player input
-            if self.platform_left:
-                if not self.platform_left_collision and self.hands.left_hand.grab_angle > FIST_THRESHOLD:
-                    self.platform_left_collision = True
-                    self.platform_left.set_opaque(True)
-                if self.platform_left_collision and self.hands.left_hand.grab_angle < FIST_THRESHOLD:
-                    self.platform_left_collision = False
-                    self.platform_left.set_opaque(False)
-
-                if not self.platform_left_collision:
-                    lx = self.hands.left_hand.x
-                    ly = self.hands.left_hand.y
-                    pos = (self.camera.position.x + self.width/2 + lx, self.camera.position.y + ly)
-                    self.physics_engine.set_position(self.platform_left, pos)
-
-            if self.platform_right:
-                if not self.platform_right_collision and self.hands.right_hand.grab_angle > FIST_THRESHOLD:
-                    self.platform_right_collision = True
-                    self.platform_right.set_opaque(True)
-                if self.platform_right_collision and self.hands.right_hand.grab_angle < FIST_THRESHOLD:
-                    self.platform_right_collision = False
-                    self.platform_right.set_opaque(False)
-
-                if not self.platform_right_collision:
-                    rx = self.hands.right_hand.x
-                    ry = self.hands.right_hand.y
-                    pos = (self.camera.position.x + self.width/2 + rx, self.camera.position.y + ry)
-                    self.physics_engine.set_position(self.platform_right, pos)
-        else:
+        if self.debug:
             # update platform position based on mouse input
-            if self.platform_left:
+            if not self.platform_left.active:
                 pos = tuple(self.camera.position + pymunk.Vec2d(self.last_mouse_position_left[0], self.last_mouse_position_left[1]))
                 self.physics_engine.set_position(self.platform_left, pos)
-            if self.platform_right:
+            if not self.platform_right.active:
                 pos = tuple(self.camera.position + pymunk.Vec2d(self.last_mouse_position_right[0], self.last_mouse_position_right[1]))
                 self.physics_engine.set_position(self.platform_right, pos)
+        
+        elif self.leap_motion:
+            # update platform positions based on second player input
+            for platform, hand in [(self.platform_left, self.hands.left_hand), (self.platform_right, self.hands.right_hand)]:
+                if not platform or not hand:
+                    continue
+                if platform.active and hand.grab_angle > FIST_THRESHOLD:
+                    platform.active = True
+                elif not platform.active and hand.grab_angle < FIST_THRESHOLD:
+                    platform.active = False
+                if not platform.active:
+                    pos = (self.camera.position.x + self.width/2 + hand.x,
+                           self.camera.position.y + self.height/2 + hand.y)
+                    self.physics_engine.set_position(platform, pos)
+
+            # if self.platform_left:
+            #     if not self.platform_left_collision and self.hands.left_hand.grab_angle > FIST_THRESHOLD:
+            #         self.platform_left_collision = True
+            #         # self.platform_left.set_opaque(True)
+            #         self.platform_left.active = True
+            #     if self.platform_left_collision and self.hands.left_hand.grab_angle < FIST_THRESHOLD:
+            #         self.platform_left_collision = False
+            #         # self.platform_left.set_opaque(False)
+            #         self.platform_left.active = False
+
+            #     if not self.platform_left_collision:
+            #         lx = self.hands.left_hand.x
+            #         ly = self.hands.left_hand.y
+            #         pos = (self.camera.position.x + self.width/2 + lx, self.camera.position.y + ly)
+            #         self.physics_engine.set_position(self.platform_left, pos)
+
+            # if self.platform_right:
+            #     # if not self.platform_right_collision and self.hands.right_hand.grab_angle > FIST_THRESHOLD:
+            #     if not self.platform_right.active and self.hands.right_hand.grab_angle > FIST_THRESHOLD:
+            #         # self.platform_right_collision = True
+            #         # self.platform_right.set_opaque(True)
+            #         self.platform_right.active = True
+            #     if self.platform_right.active and self.hands.right_hand.grab_angle < FIST_THRESHOLD:
+            #         # self.platform_right_collision = False
+            #         # self.platform_right.set_opaque(False)
+            #         self.platform_right.active = False
+
+            #     if not self.platform_right_collision:
+            #         rx = self.hands.right_hand.x
+            #         ry = self.hands.right_hand.y
+            #         pos = (self.camera.position.x + self.width/2 + rx, self.camera.position.y + ry)
+            #         self.physics_engine.set_position(self.platform_right, pos)
+
 
     def next_level(self):
         available_levels = list(sorted(LEVELS.keys()))
@@ -730,10 +751,12 @@ class GameWindow(arcade.Window):
         match button:
             case arcade.MOUSE_BUTTON_LEFT:
                 self.last_mouse_position_left = x, y
-                self.platform_left = self.platform_list[0]
+                pos = tuple(self.camera.position + pymunk.Vec2d(x, y))
+                self.physics_engine.set_position(self.platform_left, pos)
             case arcade.MOUSE_BUTTON_RIGHT:
                 self.last_mouse_position_right = x, y
-                self.platform_right = self.platform_list[1]
+                pos = tuple(self.camera.position + pymunk.Vec2d(x, y))
+                self.physics_engine.set_position(self.platform_right, pos)
             case arcade.MOUSE_BUTTON_MIDDLE:
                 # HACK debug: spawn random item
                 print('spawning item at', x, y)
@@ -741,28 +764,12 @@ class GameWindow(arcade.Window):
                                        y + self.camera.position.y, 64, 64,
                                        mass=50)
 
-                # # Test: spawn box
-                # sprite = DummyBoxSprite(x, y, 32, 10.0)
-                # self.item_list.append(sprite)
-                # body = sprite.pymunk_shape.body
-                # self.physics_engine.add_sprite(sprite, body.mass)
-
     def on_mouse_release(self, x, y, button, modifiers):
         if not self.debug:
             # mouse interaction is only required when debugging
             return
 
-        match button:
-            case arcade.MOUSE_BUTTON_LEFT:
-                self.platform_left = None
-            case arcade.MOUSE_BUTTON_RIGHT:
-                self.platform_right = None
-
     def on_mouse_motion(self, x, y, dx, dy):
-        if self.platform_left is not None:
-            self.last_mouse_position_left = (x, y)
-        if self.platform_right is not None:
-            self.last_mouse_position_right = (x, y)
         self.last_mouse_position = (x, y)
 
     def on_update(self, delta_time):
@@ -871,7 +878,7 @@ class GameWindow(arcade.Window):
         self.backgroundcolor_list.draw()
         self.background_list.draw()
         self.wall_list.draw()
-        self.platform_list.draw()
+        # self.platform_list.draw()
         if LEVELS[self.current_level]['mechanics'] == MECHANICS.PLATFORMS:
             self.controllable_platform_list.draw()
         self.item_list.draw()
