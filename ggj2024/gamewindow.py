@@ -716,10 +716,15 @@ class GameWindow(arcade.Window):
     def on_mouse_motion(self, x, y, dx, dy):
         self.last_mouse_position = (x, y)
 
-    def on_update(self, delta_time):
+    def do_physics_step(self, delta_time):
         """ Movement and game logic """
         if self.mark_player_dead:
             self.kill_player(self.mark_player_dead)
+        
+        x_inbounds = (0 <= self.player_sprite.center_x <= self.map_bounds_x)
+        y_inbounds = (0 <= self.player_sprite.center_y <= self.map_bounds_y)
+        if not (x_inbounds and y_inbounds):
+            self.mark_player_dead = 'out_of_bounds'
 
         # Rotate player to gravity
         player_object = self.physics_engine.get_physics_object(self.player_sprite)
@@ -762,6 +767,18 @@ class GameWindow(arcade.Window):
             # Player's feet are not moving. Therefore up the friction so we stop.
             self.physics_engine.set_friction(self.player_sprite, 1.0)
 
+        self.update_gravity()
+        self.update_platforms()
+        for entity in self.entities:
+            entity.update()
+
+        self.physics_engine.step(delta_time=delta_time)
+
+    def on_update(self, delta_time):
+        # Move items in the physics engine
+        for i in range(STEPS_PER_FRAME):
+            self.do_physics_step(1/(60*STEPS_PER_FRAME))
+
         # Delete old blood
         new_particle_list = arcade.SpriteList()
         t = time.time()
@@ -771,20 +788,6 @@ class GameWindow(arcade.Window):
             else:
                 new_particle_list.append(blood)
         self.particle_list = new_particle_list
-
-        self.update_gravity()
-        self.update_platforms()
-        for entity in self.entities:
-            entity.update()
-
-        # Move items in the physics engine
-        for temp in range(0,STEPS_PER_FRAME):
-            self.physics_engine.step(delta_time=1/(60*STEPS_PER_FRAME))
-
-        x_inbounds = (0 <= self.player_sprite.center_x <= self.map_bounds_x)
-        y_inbounds = (0 <= self.player_sprite.center_y <= self.map_bounds_y)
-        if not (x_inbounds and y_inbounds):
-            self.mark_player_dead = 'out_of_bounds'
 
         if self.level_transition:
             self.next_level()
