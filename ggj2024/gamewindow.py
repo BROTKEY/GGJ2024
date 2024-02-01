@@ -656,7 +656,7 @@ class GameWindow(arcade.Window):
                     platform.active = False
                 if not platform.active:
                     pos = (self.camera.position.x + self.width/2 + cx, self.camera.position.y + self.height/2 + cy)
-                    self.physics_engine.set_position(self.platform_left, pos)
+                    self.physics_engine.set_position(platform, pos)
 
 
     def next_level(self):
@@ -801,32 +801,9 @@ class GameWindow(arcade.Window):
                     self.a_pressed = self.d_pressed = False
             case 'rightstick':
                 pass
-                # elif self.current_mechanics == MECHANICS.PLATFORMS:
-                #     if not self.platform_left_collision:
-                #         lx = x_val
-                #         ly = y_val
-                #         pos = (self.camera.position.x + self.width/2 + lx, self.camera.position.y + ly)
-                #         self.physics_engine.set_position(self.platform_left, pos)
     
     def on_controller_trigger_motion(self, controller, name, value):
         pass
-        # match name:
-        #     case 'lefttrigger':
-        #         if self.platform_left:
-        #             if not self.platform_left_collision and value >= CONTROLLER_TRIGGER_PLATFORM_THRESHOLD:
-        #                 self.platform_left_collision = True
-        #                 self.platform_left.set_opaque(True)
-        #             if self.platform_left_collision and value < CONTROLLER_TRIGGER_PLATFORM_THRESHOLD:
-        #                 self.platform_left_collision = False
-        #                 self.platform_left.set_opaque(False)
-        #     case 'righttrigger':
-        #         if self.platform_right:
-        #             if not self.platform_right_collision and value >= CONTROLLER_TRIGGER_PLATFORM_THRESHOLD:
-        #                 self.platform_right_collision = True
-        #                 self.platform_right.set_opaque(True)
-        #             if self.platform_right_collision and value < CONTROLLER_TRIGGER_PLATFORM_THRESHOLD:
-        #                 self.platform_right_collision = False
-        #                 self.platform_right.set_opaque(False)
 
     def on_controller_dpad_motion(self, controller, left, right, up, down):
         print('dpad', left, right, up, down)
