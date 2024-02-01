@@ -86,7 +86,6 @@ class GameWindow(arcade.Window):
         self.wall_list: Optional[arcade.SpriteList] = None
         self.item_list: Optional[arcade.SpriteList] = None
         self.moving_sprites_list: Optional[arcade.SpriteList] = None
-        # self.platform_list: Optional[arcade.SpriteList] = None
         self.controllable_platform_list: Optional[arcade.SpriteList] = None
         self.particle_list: Optional[arcade.SpriteList] = None
         self.background_list: Optional[arcade.SpriteList] = None
@@ -149,7 +148,6 @@ class GameWindow(arcade.Window):
 
         # Create the sprite lists
         self.player_list = arcade.SpriteList()
-        # self.platform_list = arcade.SpriteList()
 
         self.mark_player_dead = None
 
@@ -194,14 +192,8 @@ class GameWindow(arcade.Window):
         self.platform_right = self.controllable_platform_list[1]
 
         if self.debug:
-            # self.platform_left_collision = True
-            # self.platform_right_collision = True
             self.platform_left.active = True
             self.platform_right.active = True
-        # else:
-        #     self.platform_left_collision = False
-        #     self.platform_right_collision = False
-
 
     def load_level(self, level):
         self.current_level = level
@@ -349,19 +341,9 @@ class GameWindow(arcade.Window):
         self.physics_engine.add_sprite_list(self.finish_list,
                                             collision_type='finish',
                                             body_type=arcade.PymunkPhysicsEngine.STATIC)
-        # self.physics_engine.add_sprite_list(
-        #     self.platform_list,
-        #     friction=DYNAMIC_ITEM_FRICTION,
-        #     collision_type="platform",
-        #     body_type=arcade.PymunkPhysicsEngine.KINEMATIC
-        # )
-        
-
-
-        self.setup_platforms()
 
         # add platforms moved by second player
-
+        self.setup_platforms()
         self.physics_engine.add_sprite_list(
             self.controllable_platform_list,
             friction=DYNAMIC_ITEM_FRICTION,
@@ -535,8 +517,7 @@ class GameWindow(arcade.Window):
 
     def spawn_item(self, filename, center_x, center_y, width, height, mass=5.0, friction=0.2, elasticity=None):
         """Spawn one of the diversifier items into the scene"""
-        sprite = arcade.Sprite(filename)#, scale=0.5)
-        # sprite.
+        sprite = arcade.Sprite(filename)
         sprite.width = width
         sprite.height = height
         sprite.center_x = center_x
@@ -564,8 +545,8 @@ class GameWindow(arcade.Window):
 
         if self.debug:
             pass
-            # TODO: maybe also make mouse controlled gravity an optional feature and include this one again?
             # This one will set gravity to 0 if two opposite keys are pressed, is this good...?
+            # TODO: maybe also make mouse controlled gravity an optional feature and include this one again?
             # new_grav = np.array([0, 0], dtype='float')
             # if self.left_pressed and not self.right_pressed:
             #     new_grav[0] = -GRAVITY
@@ -625,39 +606,6 @@ class GameWindow(arcade.Window):
                            self.camera.position.y + self.height/2 + hand.y)
                     self.physics_engine.set_position(platform, pos)
 
-            # if self.platform_left:
-            #     if not self.platform_left_collision and self.hands.left_hand.grab_angle > FIST_THRESHOLD:
-            #         self.platform_left_collision = True
-            #         # self.platform_left.set_opaque(True)
-            #         self.platform_left.active = True
-            #     if self.platform_left_collision and self.hands.left_hand.grab_angle < FIST_THRESHOLD:
-            #         self.platform_left_collision = False
-            #         # self.platform_left.set_opaque(False)
-            #         self.platform_left.active = False
-
-            #     if not self.platform_left_collision:
-            #         lx = self.hands.left_hand.x
-            #         ly = self.hands.left_hand.y
-            #         pos = (self.camera.position.x + self.width/2 + lx, self.camera.position.y + ly)
-            #         self.physics_engine.set_position(self.platform_left, pos)
-
-            # if self.platform_right:
-            #     # if not self.platform_right_collision and self.hands.right_hand.grab_angle > FIST_THRESHOLD:
-            #     if not self.platform_right.active and self.hands.right_hand.grab_angle > FIST_THRESHOLD:
-            #         # self.platform_right_collision = True
-            #         # self.platform_right.set_opaque(True)
-            #         self.platform_right.active = True
-            #     if self.platform_right.active and self.hands.right_hand.grab_angle < FIST_THRESHOLD:
-            #         # self.platform_right_collision = False
-            #         # self.platform_right.set_opaque(False)
-            #         self.platform_right.active = False
-
-            #     if not self.platform_right_collision:
-            #         rx = self.hands.right_hand.x
-            #         ry = self.hands.right_hand.y
-            #         pos = (self.camera.position.x + self.width/2 + rx, self.camera.position.y + ry)
-            #         self.physics_engine.set_position(self.platform_right, pos)
-
 
     def next_level(self):
         available_levels = list(sorted(LEVELS.keys()))
@@ -707,16 +655,12 @@ class GameWindow(arcade.Window):
 
         if key == arcade.key.LEFT:
             self.left_pressed = True
-            # self.update_gravity()
         elif key == arcade.key.RIGHT:
             self.right_pressed = True
-            # self.update_gravity()
         elif key == arcade.key.UP:
             self.up_pressed = True
-            # self.update_gravity()
         elif key == arcade.key.DOWN:
             self.down_pressed = True
-            # self.update_gravity()
 
     def on_key_release(self, key, modifiers):
         """Called when the user releases a key. """
@@ -798,7 +742,6 @@ class GameWindow(arcade.Window):
                 force_dir = rotate90_cw(self.main_gravity_dir)
                 self.apply_force_to_player(force_dir, PLAYER_MOVE_FORCE_ON_GROUND if is_on_ground else PLAYER_MOVE_FORCE_IN_AIR)
             # Set friction to zero for the player while moving
-            # TODO: is this really a good idea?
             self.physics_engine.set_friction(self.player_sprite, 0)
         elif self.d_pressed and not self.a_pressed:
             # Create a force to the right, perpendicular to the gravity.
@@ -810,7 +753,6 @@ class GameWindow(arcade.Window):
                 force_dir = rotate90_ccw(self.main_gravity_dir)
                 self.apply_force_to_player(force_dir, PLAYER_MOVE_FORCE_ON_GROUND if is_on_ground else PLAYER_MOVE_FORCE_IN_AIR)
             # Set friction to zero for the player while moving
-            # TODO: is this really a good idea?
             self.physics_engine.set_friction(self.player_sprite, 0)
         elif self.w_pressed and not self.s_pressed:
             pass
@@ -878,7 +820,6 @@ class GameWindow(arcade.Window):
         self.backgroundcolor_list.draw()
         self.background_list.draw()
         self.wall_list.draw()
-        # self.platform_list.draw()
         if LEVELS[self.current_level]['mechanics'] == MECHANICS.PLATFORMS:
             self.controllable_platform_list.draw()
         self.item_list.draw()

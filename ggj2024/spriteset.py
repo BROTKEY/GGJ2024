@@ -138,7 +138,6 @@ def get_tile_hitbox(tile: pytiled_parser.Tile, size: Optional[tuple[int, int]] =
 
 
 
-
 class Spriteset():
     """Provides sprite access to a pytiled_parser Tileset"""
     
