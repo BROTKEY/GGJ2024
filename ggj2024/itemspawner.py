@@ -27,7 +27,7 @@ class ItemSpawner(Entity):
                  active_region: Region | None = None,
                  item_size: int | tuple[int, int] = (32, 32),
                  max_scale: int | None = None,
-                 item_mass = 5,
+                 item_mass = 2,
                  **kwargs
                  ):
         """@param sprite The sprite that represents it in the world
