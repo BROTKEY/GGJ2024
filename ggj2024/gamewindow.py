@@ -796,7 +796,6 @@ class GameWindow(arcade.Window):
                 print('Unknown button', button, 'released')
     
     def on_controller_stick_motion(self, controller, name, x_val, y_val):
-        # print('moved', name, x_val, y_val)
         match name:
             case 'leftstick':
                 if x_val > CONTROLLER_STICK_WALK_DEADZONE:
