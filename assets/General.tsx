@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<tileset version="1.8" tiledversion="1.8.0" name="General" tilewidth="256" tileheight="256" tilecount="27" columns="0">
+<tileset version="1.10" tiledversion="1.10.2" name="General" tilewidth="256" tileheight="256" tilecount="27" columns="0">
  <grid orientation="orthogonal" width="1" height="1"/>
  <tile id="20">
   <image width="128" height="128" source="TILES/fence.png"/>
@@ -9,18 +9,35 @@
  </tile>
  <tile id="26">
   <image width="128" height="128" source="TILES/Platform.png"/>
+  <objectgroup draworder="index" id="2">
+   <object id="1" x="2" y="36" width="123.75" height="40.5"/>
+  </objectgroup>
  </tile>
  <tile id="27">
   <image width="128" height="128" source="TILES/Slope.png"/>
+  <objectgroup draworder="index" id="2">
+   <object id="3" x="0" y="0">
+    <polygon points="-0.00958807,-0.0078125 -0.00808081,127.998 128.035,127.985"/>
+   </object>
+  </objectgroup>
  </tile>
  <tile id="30">
   <image width="128" height="128" source="TILES/White.png"/>
+  <objectgroup draworder="index" id="2">
+   <object id="1" x="0" y="0" width="128" height="128"/>
+  </objectgroup>
  </tile>
  <tile id="31">
   <image width="128" height="128" source="TILES/Flat.png"/>
+  <objectgroup draworder="index" id="2">
+   <object id="3" x="0" y="0" width="128" height="128"/>
+  </objectgroup>
  </tile>
  <tile id="32">
   <image width="128" height="128" source="TILES/Flat+root.png"/>
+  <objectgroup draworder="index" id="2">
+   <object id="1" x="0" y="0" width="128" height="128"/>
+  </objectgroup>
  </tile>
  <tile id="33">
   <image width="128" height="128" source="TILES/Flower2.png"/>
@@ -97,8 +114,11 @@
    </object>
   </objectgroup>
  </tile>
- <tile id="74">
+ <tile id="74" type="PlayerControlledPlatform">
   <image width="256" height="128" source="TILES/PlayerControlledPlatform.png"/>
+  <objectgroup draworder="index" id="2">
+   <object id="1" x="1.33333" y="44.3333" width="253.667" height="46.3333"/>
+  </objectgroup>
  </tile>
  <tile id="75">
   <image width="128" height="128" source="TILES/Arrow.png"/>
