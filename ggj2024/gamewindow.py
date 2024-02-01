@@ -5,6 +5,7 @@ import random
 import traceback
 from typing import Optional
 from enum import Enum
+from dataclasses import dataclass
 
 import arcade
 import pymunk
@@ -107,12 +108,12 @@ class GameWindow(arcade.Window):
 
         self.space_pressed: bool = False
         self.enter_pressed: bool = False
+        self.shift_pressed: bool = False
 
         self.left_pressed: bool = False
         self.right_pressed: bool = False
         self.up_pressed: bool = False
         self.down_pressed: bool = False
-
         self.hands = HandReceiver()
 
         self.splatter_texture_dict: dict[arcade.Sprite, Image.Image] = dict()
@@ -691,22 +692,23 @@ class GameWindow(arcade.Window):
                 self.space_pressed = True
                 # find out if player is standing on ground
                 self.player_sprite.jump(self.physics_engine)
+            case arcade.key.MOD_SHIFT:
+                self.shift_pressed = True
 
             case arcade.key.ENTER:
                 self.enter_pressed = True
                 self.next_level()
-
             case arcade.key.DELETE:
                 self.mark_player_dead = 'keyboard'
-
-        if key == arcade.key.LEFT:
-            self.left_pressed = True
-        elif key == arcade.key.RIGHT:
-            self.right_pressed = True
-        elif key == arcade.key.UP:
-            self.up_pressed = True
-        elif key == arcade.key.DOWN:
-            self.down_pressed = True
+            
+            case arcade.key.LEFT:
+                self.left_pressed = True
+            case arcade.key.RIGHT:
+                self.right_pressed = True
+            case arcade.key.UP:
+                self.up_pressed = True
+            case arcade.key.DOWN:
+                self.down_pressed = True
 
     def on_key_release(self, key, modifiers):
         """Called when the user releases a key. """
@@ -731,6 +733,8 @@ class GameWindow(arcade.Window):
                 self.up_pressed = False
             case arcade.key.DOWN:
                 self.down_pressed = False
+            case arcade.key.MOD_SHIFT:
+                self.shift_pressed = False
 
     def on_mouse_press(self, x, y, button, modifiers):
         """ Called whenever the mouse button is clicked. """
@@ -763,6 +767,7 @@ class GameWindow(arcade.Window):
         self.last_mouse_position = (x, y)
 
     def on_controller_button_pressed(self, controller, button):
+        print('Pressed', button)
         match button:
             case 'a':
                 self.player_sprite.jump(self.physics_engine)
@@ -777,6 +782,7 @@ class GameWindow(arcade.Window):
                 print('Unknown button', button, 'pressed')
     
     def on_controller_button_released(self, controller, button):
+        print('Released', button)
         match button:
             case 'a':
                 pass
@@ -808,14 +814,18 @@ class GameWindow(arcade.Window):
     def on_controller_dpad_motion(self, controller, left, right, up, down):
         print('dpad', left, right, up, down)
     
+    def is_player_sprinting(self):
+        if self.controller:
+            if self.controller.x or self.controller.y:
+                return True
+        if self.shift_pressed:
+            return True
+        return False
 
     def on_update(self, delta_time):
         """ Movement and game logic """
         if self.mark_player_dead:
             self.kill_player(self.mark_player_dead)
-
-        # Platform controller controls
-        
 
         # Rotate player to gravity
         player_object = self.physics_engine.get_physics_object(self.player_sprite)
@@ -826,8 +836,13 @@ class GameWindow(arcade.Window):
 
         # Update player based on key press
         is_on_ground = self.physics_engine.is_on_ground(self.player_sprite)
-        movement_force = PLAYER_MOVE_FORCE_ON_GROUND if is_on_ground else PLAYER_MOVE_FORCE_IN_AIR
-        speed_limit = PLAYER_MAX_WALKING_SPEED if is_on_ground else PLAYER_MAX_AIRCONTROL_SPEED
+        is_sprinting = self.is_player_sprinting()
+        if is_on_ground:
+            movement_force = PLAYER_SPRINT_FORCE_ON_GROUND if is_sprinting else PLAYER_MOVE_FORCE_ON_GROUND
+        else:
+            movement_force = PLAYER_SPRINT_FORCE_IN_AIR if is_sprinting else PLAYER_MOVE_FORCE_IN_AIR
+        # movement_force = PLAYER_MOVE_FORCE_ON_GROUND if is_on_ground else PLAYER_MOVE_FORCE_IN_AIR
+        speed_limit = (PLAYER_MAX_SPRINTING_SPEED if is_sprinting else PLAYER_MAX_WALKING_SPEED) if is_on_ground else PLAYER_MAX_AIRCONTROL_SPEED
         if self.a_pressed and not self.d_pressed:
             # Create a force to the left, perpendicular to the gravity.
             # Gravity pulls down so this actually needs to be the gravity rotated *clockwise*
