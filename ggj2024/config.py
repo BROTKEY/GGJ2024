@@ -82,8 +82,13 @@ FIST_THRESHOLD = 2.5
 STEPS_PER_FRAME = 4
 
 # Blood particles
-BLOOD_PER_SPLATTER = 75
+BLOOD_PARTICLES_PER_SPLATTER = 75
+# Max. initial impulse of blood particles
 BLOOD_IMPULSE = 1000
+# When a particle collides a random offset in movement direction will be added (for more randomness). 
+# IMAPCT_RANGE is the multiplier for this (higher = more distributed over the wall)
+BLOOD_SPLATTER_IMPACT_RANGE = 0.01
+# Particle size will be random from [MIN, MIN + RANGE)
 BLOOD_PARTICLE_SIZE_MIN = 1
 BLOOD_PARTICLE_SIZE_RANGE = 5
 
@@ -92,6 +97,7 @@ BLOOD_LIFETIME = 3
 BLOOD_COLOR_VARIATION = 60
 BLOOD_PARTICLE_ANTIALIASING = 4
 BLOOD_WALL_ANTIALIASING = 4
+# Multiplier for the size of the blood splatters on the wall compared to their respective particles
 BLOOD_WALL_SIZE_MULTIPLIER = 2
 
 BLOOD_COLOR_VARIATION = 60
@@ -110,8 +116,16 @@ CONTROLLER_PLATFORM_MULTIPLIER = 500
 USE_LEAPMOTION = False
 
 # Sounds
+MUTE_MUSIC = False
 HITSOUND_MIN_IMPULSE = 5000
 HITSOUND_RANGE = 10000
 
 # Utils
+# Epsilon to avoid zero division
 ALPHA_COMPOSITE_EPSILON = 1e-9
+
+# Debug switches. Only relevant when launching with --debug
+DEBUG_SHOW_ITEM_HITBOXES = True
+DEBUG_SHOW_PLAYER_HITBOXES = True
+DEBUG_HITBOX_COLOR = (0, 0, 255, 255) # blue 
+DEBUG_BLOOD_SPLATTER = False
