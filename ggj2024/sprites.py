@@ -151,8 +151,13 @@ class ParticleSprite(arcade.Sprite):
         self.radius = radius
         self.color = color
         self.killtime = time.time() + liftetime
+        # Let every 2nd sprite ignore background so that the grass won't catch all the blood
+        self.ignore_background = np.random.rand() > 0.5
     
     def register_physics_engine(self, physics_engine):
         super().register_physics_engine(physics_engine)
         if isinstance(physics_engine, PhysicsEngine):
-            physics_engine.disable_collisions(self, ParticleSprite.DISABLED_COLLISIONS)
+            if self.ignore_background:
+                physics_engine.disable_collisions(self, ParticleSprite.DISABLED_COLLISIONS + ['background'])
+            else:
+                physics_engine.disable_collisions(self, ParticleSprite.DISABLED_COLLISIONS)
