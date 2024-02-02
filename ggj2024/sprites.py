@@ -50,7 +50,19 @@ class PlayerSprite(arcade.Sprite):
         self.texture = self.idle_texture_pair[0]
 
         # Hit box will be set based on the first image used.
-        self.hit_box = self.texture.hit_box_points
+        # self.hit_box = self.texture.hit_box_points
+        R = 24
+        L = -R
+        T = 20
+        B = -60
+        self.hit_box = [
+            (L,   B+4),
+            (L+4, B),
+            (R-4, B),
+            (R,   B+4),
+            (R,   T), 
+            (L,   T), 
+        ]
 
         # Default to face-right
         self.character_face_direction = RIGHT_FACING
@@ -109,6 +121,7 @@ class PlayerSprite(arcade.Sprite):
             if self.cur_texture > 7:
                 self.cur_texture = 0
             self.texture = self.walk_textures[self.cur_texture][self.character_face_direction]
+        # self.set_hit_box(self.texture.hit_box_points)
 
 
 class PlayerControlledPlatformSprite(arcade.Sprite):

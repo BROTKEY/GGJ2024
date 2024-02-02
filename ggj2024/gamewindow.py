@@ -144,6 +144,7 @@ class GameWindow(arcade.Window):
         self.finish_tiles: arcade.Sprite = None
 
         self.active_theme = None
+        self.music_on = not MUTE_MUSIC
 
         self.platform_left: PlayerControlledPlatformSprite = None
         self.platform_right: PlayerControlledPlatformSprite = None
@@ -209,8 +210,7 @@ class GameWindow(arcade.Window):
         # Playing the audio
         if self.active_theme:
             arcade.stop_sound(self.active_theme)
-        if not MUTE_MUSIC:
-            self.active_theme = arcade.play_sound(LEVELS[self.current_level]['theme'], 1.0, -1, True)
+        self.active_theme = arcade.play_sound(LEVELS[self.current_level]['theme'], 1.0 if self.music_on else 0.0, -1, True)
 
         tile_map = LEVELS[self.current_level]['tilemap']
         self.map_bounds_x = tile_map.width * tile_map.tile_width * tile_map.scaling
@@ -505,8 +505,16 @@ class GameWindow(arcade.Window):
     def main_gravity_dir(self):
         """The direction (= normalized vector) of the main gravity"""
         return self._main_gravity_direction
-    
 
+    @property
+    def music_on(self):
+        return self._music_on
+    @music_on.setter
+    def music_on(self, value):
+        self._music_on = value
+        if self.active_theme:
+            self.active_theme.volume = 1.0 if self._music_on else 0.0
+    
     def point_to_sprite(self, sprite: arcade.Sprite, point: pymunk.Vec2d | tuple):
         """Convert a point from world space to sprite space (0, 0 is the bottom left corner of the sprite)"""
         if not isinstance(point, pymunk.Vec2d):
@@ -696,6 +704,9 @@ class GameWindow(arcade.Window):
 
             case arcade.key.DELETE:
                 self.mark_player_dead = 'keyboard'
+
+            case arcade.key.M:
+                self.music_on = not self.music_on
 
         if key == arcade.key.LEFT:
             self.left_pressed = True
