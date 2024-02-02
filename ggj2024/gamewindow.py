@@ -97,6 +97,8 @@ class GameWindow(arcade.Window):
         self.finish_list: Optional[arcade.SpriteList] = None
         self.spawned_item_list: Optional[arcade.SpriteList] = None
 
+        self.debug_sprite_list: Optional[arcade.SpriteList] = None
+
         self.spawnable_assets: list[str] = []
 
         self.regions: list[Region] = []
@@ -207,7 +209,8 @@ class GameWindow(arcade.Window):
         # Playing the audio
         if self.active_theme:
             arcade.stop_sound(self.active_theme)
-        self.active_theme = arcade.play_sound(LEVELS[self.current_level]['theme'], 1.0, -1, True)
+        if not MUTE_MUSIC:
+            self.active_theme = arcade.play_sound(LEVELS[self.current_level]['theme'], 1.0, -1, True)
 
         tile_map = LEVELS[self.current_level]['tilemap']
         self.map_bounds_x = tile_map.width * tile_map.tile_width * tile_map.scaling
@@ -228,6 +231,7 @@ class GameWindow(arcade.Window):
 
         self.particle_list = arcade.SpriteList()
         self.spawned_item_list = arcade.SpriteList()
+        self.debug_sprite_list = arcade.SpriteList()
 
         # Pull the sprite layers out of the tile map
         self.wall_list = tile_map.sprite_lists["Platforms"]
@@ -235,6 +239,7 @@ class GameWindow(arcade.Window):
         self.background_list = tile_map.sprite_lists["Background"]
         self.soft_list = tile_map.sprite_lists.get('Soft') or arcade.SpriteList()
         self.finish_list = tile_map.sprite_lists.get('Finish') or arcade.SpriteList()
+
         map_entities = tile_map.sprite_lists.get('Entities') or []
         map_objects = tile_map.object_lists.get('Regions') or []
         
@@ -400,9 +405,93 @@ class GameWindow(arcade.Window):
         self.physics_engine.add_collision_handler('item', 'wall', post_handler=handle_item_wall_collision)
         self.physics_engine.add_collision_handler('item', 'item', post_handler=handle_item_wall_collision)
 
+        # This is what draws the blood splatters onto the walls and items
+        def handle_particle_static_collision(particle: ParticleSprite, other: arcade.Sprite, arbiter: pymunk.Arbiter, space: pymunk.Space, data):
+            """Handle a collision between a blood particle and a static object (walls, backgrounds)"""
+            # TODO: move constants to config
+            SPLATTER_IMPACT_RANGE = 0.005
+            try:
+                if particle not in self.physics_engine.sprites:
+                    # Was already removed by other collision...?
+                    # TODO: investigate this. Is this a bug and can this be avoided? (performance)
+                    return False
+                
+                particle_obj: arcade.PymunkPhysicsObject = self.physics_engine.get_physics_object(particle)
+                impact_v = particle_obj.body.velocity
+                impact_pos: pymunk.Vec2d = arbiter.contact_point_set.points[0].point_b
+                
+                # TODO: normal or uniform distribution?
+                # additional_movement = np.random.rand() * SPLATTER_IMPACT_RANGE
+                additional_movement = abs(np.random.normal() * SPLATTER_IMPACT_RANGE) * impact_v
+                splatter_pos = impact_pos + additional_movement
+                
+                # dbg_sprite_impact = arcade.SpriteCircle(4, (255, 0, 0, 127))
+                # dbg_sprite_impact.position = impact_pos
+                # self.debug_sprite_list.append(dbg_sprite_impact)
+                dbg_sprite_final = arcade.SpriteCircle(1, (0, 0, 255))
+                # dbg_sprite_final = arcade.SpriteCircle(int(particle.radius), (0, 0, 255))
+                dbg_sprite_final.position = splatter_pos
+                self.debug_sprite_list.append(dbg_sprite_final)
+
+                collision_filter = self.physics_engine.make_shapefilter(['wall', 'background'], categories='particle')
+                collisions = space.point_query(splatter_pos, max_distance=int(particle.radius), shape_filter=collision_filter)
+                print('Collision with', len(collisions), 'shapes')
+
+                if collisions:
+                    # These are the same for all collided tiles and are only needed *if* there is a collision
+                    splatter_radius = particle.radius * BLOOD_WALL_SIZE_MULTIPLIER
+                    splatter = create_circle_image(splatter_radius * 2, particle.color, BLOOD_WALL_ANTIALIASING)
+                    splatter_array = np.array(splatter).astype('float') / 255
+
+                for i, collision_info in enumerate(collisions):
+                    # TODO: this operation is O(n), find better solution
+                    collided_sprite = self.physics_engine.get_sprite_for_shape(collision_info.shape)
+
+                    dbg_sprite_collision_tile = arcade.SpriteSolidColor(int(collided_sprite.width), int(collided_sprite.height), (128, 255, 128, 16))
+                    dbg_sprite_collision_tile.position = collided_sprite.position
+                    self.debug_sprite_list.append(dbg_sprite_collision_tile)
+
+                    pos_in_sprite = np.array(self.point_to_sprite(sprite=collided_sprite, point=splatter_pos))
+                    print(f'Sprite #{i+1}: collision at {tuple(pos_in_sprite)} in sprite coordinates')
+                    
+                    tex_image = collided_sprite.texture.image
+                    sprite_size = np.array([collided_sprite.width, collided_sprite.height])
+                    image_size = np.array([tex_image.width, tex_image.height])
+                    sprite_scale = image_size / sprite_size
+                    pos_in_image = sprite_scale * pos_in_sprite
+                    pos_in_image[1] = tex_image.height - pos_in_image[1]
+                    
+                    # Draw centered at pos_in_image
+                    pos_in_image -= splatter_radius
+                    print(f'{tuple(pos_in_image)} in texture coords, centered {tuple(pos_in_image)}')
+
+                    tex_array = np.array(tex_image).astype('float') / 255
+                    new_img = alpha_composite(tex_array, splatter_array, tuple(pos_in_image.astype(int)), inplace=True, mask_fg_with_bg=True) * 255
+                    tex_image = Image.fromarray(new_img.astype('uint8'))
+
+                    self.splatter_texture_dict[other] = tex_image
+                    tex_name = f'splatter_{self.splatter_counter}'
+                    self.splatter_counter += 1
+                    texture = arcade.Texture(tex_name, tex_image)
+                    
+                    # HACK: just restore sprite size (gets reset on texture change)
+                    collided_sprite.texture = texture
+                    collided_sprite.width, other.height = sprite_size
+
+                # Collision handled, remove particle
+                self.physics_engine.remove_sprite(particle)
+                self.particle_list.remove(particle)
+            except Exception as err:
+                traceback.print_exception(err)
+            # Sprite is removed, don't continue collision
+            return False
+
+
         def handle_particle_x_collision(particle: ParticleSprite, other: arcade.Sprite, arbiter: pymunk.Arbiter, space, data):
             # HACK: store old width and height, reset them after changing the texture
             # FIXME: sometimes the alpha_composite functions raises a ValueError when broadcasting shapes together, could not find the problem yet
+            # print(particle.velocity)
+            # print(arbiter.total_impulse)
             try:
                 old_w, old_h = other.width, other.height
                 self.physics_engine.remove_sprite(particle)
@@ -450,11 +539,12 @@ class GameWindow(arcade.Window):
                 print('Error in particle collision function')
                 print(traceback.format_exc())
 
-        self.physics_engine.add_collision_handler('particle', 'wall', post_handler=handle_particle_x_collision)
+        self.physics_engine.add_collision_handler('particle', 'wall', post_handler=handle_particle_x_collision, begin_handler=handle_particle_static_collision)
         self.physics_engine.add_collision_handler('particle', 'item', post_handler=handle_particle_x_collision)
         self.physics_engine.add_collision_handler('particle', 'background', 
                                                   post_handler=handle_particle_x_collision, 
-                                                  begin_handler=lambda *args: np.random.rand() > 0.5)
+                                                  begin_handler=lambda *args: False)
+                                                #   begin_handler=lambda *args: np.random.rand() > 0.5)
         self.physics_engine.add_collision_handler('particle', 'soft', post_handler=handle_particle_x_collision)
 
 
@@ -483,6 +573,24 @@ class GameWindow(arcade.Window):
     def main_gravity_dir(self):
         """The direction (= normalized vector) of the main gravity"""
         return self._main_gravity_direction
+    
+
+    def point_to_sprite(self, sprite: arcade.Sprite, point: pymunk.Vec2d | tuple):
+        """Convert a point from world space to sprite space (0, 0 is the bottom left corner of the sprite)"""
+        if not isinstance(point, pymunk.Vec2d):
+            point = pymunk.Vec2d(*point)
+        # Sprite's position is unreliable, use physics object
+        body = self.physics_engine.get_physics_object(sprite).body
+        # Get position on the top left (default is center)
+        s_rot = body.angle
+        if s_rot == 0.0:
+            # No rotation, simple case
+            return point - body.position + pymunk.Vec2d(sprite.width/2, sprite.height/2)
+        # Handle rotation
+        s_pos: pymunk.Vec2d = point - body.position
+        s_pos = s_pos.rotated(s_rot)
+        return s_pos + pymunk.Vec2d(sprite.width/2, sprite.height/2)
+        
 
     def kill_player(self, reason):
         print('Player died:', reason)
@@ -836,3 +944,5 @@ class GameWindow(arcade.Window):
         for entity in self.entities:
             entity.draw()
         self.particle_list.draw()
+        if self.debug:
+            self.debug_sprite_list.draw()

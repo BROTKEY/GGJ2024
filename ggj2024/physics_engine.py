@@ -1,6 +1,7 @@
 import logging
 from typing import Callable, Iterable, Optional, Any, Union, Tuple, Dict, List
 import math
+import numpy as np
 
 from pyglet.math import Vec2
 import pymunk
@@ -309,3 +310,30 @@ class PhysicsEngine(arcade.PymunkPhysicsEngine):
             h.pre_solve = _f3
         if separate_handler:
             h.separate = _f4
+    
+    def make_shapefilter(self, collision_types: str | list[str], categories: Optional[list[str]|str] = None, group: int = 0, invert_mask: bool = False, inver_categories: bool = False):
+        """Make a shape filter for collisions with the given type(s).
+        :param collision_types: collision type(s) to include in filter
+        :param categories: collision type(s) this filter should belong to (default: all)
+        :param group: collision group (see pymunk's doc on ShapeFilters for details)
+        :param invert_mask: invert filter (so that collisions happen with every collision type *excep* the given ones)
+        """
+        if categories is not None:
+            if isinstance(categories, str):
+                categories = self.get_collision_category(categories)
+            else:
+                categories = np.bitwise_or.reduce([self.get_collision_category(c) for c in categories])
+        else:
+            categories = pymunk.ShapeFilter.ALL_CATEGORIES()
+        if isinstance(collision_types, str):
+            mask = self.get_collision_category(collision_types)
+        else:
+            mask = np.bitwise_or.reduce([self.get_collision_category(t) for t in collision_types])
+        
+        if inver_categories:
+            categories = ~categories
+        if invert_mask:
+            mask = ~mask
+        
+        return pymunk.ShapeFilter(group, categories, mask)
+        
