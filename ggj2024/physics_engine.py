@@ -1,17 +1,19 @@
 import logging
-from typing import Iterable
+from typing import Callable, Iterable, Optional, Any, Union, Tuple, Dict, List
+import math
 
+from pyglet.math import Vec2
 import pymunk
 import arcade
+from arcade import PymunkPhysicsObject, Sprite
 
 
 LOG = logging.getLogger(__name__)
 
 
-# TODO: use dict for collision_types instead of list. Requires rewrite of some base class functions.
 class PhysicsEngine(arcade.PymunkPhysicsEngine):
     """
-    GGJ2024 Physics Engine: extension of arcade.PymunkPhysicsEngine
+    GGJ2024 Physics Engine: extension of arcade.PymunkPhysicsEngine with some extra features and optimizations.
 
     :param gravity: The direction where gravity is pointing
     :param damping: The amount of speed which is kept to the next tick. a value of 1.0 means no speed loss,
@@ -22,23 +24,172 @@ class PhysicsEngine(arcade.PymunkPhysicsEngine):
 
     def __init__(self, gravity=(0, 0), damping: float = 1.0, maximum_incline_on_ground: float = 0.708):
         super().__init__(gravity, damping, maximum_incline_on_ground)
+        self.collision_types: dict[str, int] = {}
+        self.next_collision_category: int = 1
     
-    def _find_or_add_collision_type(self, collision_type: str) -> int:
-        # Yes, try-except is actually the most efficient way to do this in python...
-        try:
-            return self.collision_types.index(collision_type)
-        except ValueError:
-            LOG.debug(f"Adding new collision type of {collision_type}.")
-            id = len(self.collision_types)
-            self.collision_types.append(collision_type)
-            return id
 
-    # def set_collisions(self, group1: str, group2: str, enable_collisions: bool):
-    #     """Enable or disable collisions between two collision types"""
-    #     # fuck this won't work as shapefilters are per-object. Will have to do it another way....
-    #     id1 = self._find_or_add_collision_type(group1)
-    #     id2 = self._find_or_add_collision_type(group2)
-        
+    def add_sprite(self,
+                   sprite: Sprite,
+                   mass: float = 1,
+                   friction: float = 0.2,
+                   elasticity: Optional[float] = None,
+                   moment_of_inertia: Optional[float] = None,  # correct spelling
+                   body_type: int = arcade.PymunkPhysicsEngine.DYNAMIC,
+                   damping: Optional[float] = None,
+                   gravity: Union[pymunk.Vec2d, Tuple[float, float], Vec2] = None,
+                   max_velocity: int = None,
+                   max_horizontal_velocity: int = None,
+                   max_vertical_velocity: int = None,
+                   radius: float = 0,
+                   collision_type: Optional[str] = "default",
+                   # the next two arguments are for backwards compatibility with prior versions
+                   moment_of_intertia: Optional[float] = None,  # typo keyword, used by 2.6.2 and 2.6.3
+                   moment: Optional[float] = None  # used prior to 2.6.2
+                   ):
+        """ Add a sprite to the physics engine.
+            Rewritten to use dicts instead of lists for collision type management
+
+            :param sprite: The sprite to add
+            :param mass: The mass of the object. Defaults to 1
+            :param friction: The friction the object has. Defaults to 0.2
+            :param elasticity: How bouncy this object is. 0 is no bounce. Values of 1.0 and higher may behave badly.
+            :param moment_of_inertia: The moment of inertia, or force needed to change angular momentum. \
+            Providing infinite makes this object stuck in its rotation.
+            :param body_type: The type of the body. Defaults to Dynamic, meaning, the body can move, rotate etc. \
+            Providing STATIC makes it fixed to the world.
+            :param damping: See class docs
+            :param gravity: See class docs
+            :param max_velocity: The maximum velocity of the object.
+            :param max_horizontal_velocity: maximum velocity on the x axis
+            :param max_vertical_velocity: maximum velocity on the y axis
+            :param radius:
+            :param collision_type:
+            :param moment_of_intertia: Deprecated alias of moment_of_inertia compatible with a typo introduced in 2.6.2
+            :param moment: Deprecated alias of moment_of_inertia compatible with versions <= 2.6.1
+        """
+
+        if damping is not None:
+            sprite.pymunk.damping = damping
+
+        if gravity is not None:
+            sprite.pymunk.gravity = gravity
+
+        if max_velocity is not None:
+            sprite.pymunk.max_velocity = max_velocity
+
+        if max_vertical_velocity is not None:
+            sprite.pymunk.max_vertical_velocity = max_vertical_velocity
+
+        if max_horizontal_velocity is not None:
+            sprite.pymunk.max_horizontal_velocity = max_horizontal_velocity
+
+        # See if the sprite already has been added
+        if sprite in self.sprites:
+            LOG.warning("Attempt to add a Sprite that has already been added. Ignoring.")
+            return
+
+        # Get a number associated with the string of collision_type
+        collision_category = self.get_collision_category(collision_type)
+
+        # Backwards compatibility for a typo introduced in 2.6.2 and for versions under 2.6.1
+        # The current version is checked first, then the most common older form, then the typo
+        moment_of_inertia = moment_of_inertia or moment or moment_of_intertia
+
+        # Default to a box moment_of_inertia
+        if moment_of_inertia is None:
+            moment_of_inertia = pymunk.moment_for_box(mass, (sprite.width, sprite.height))
+
+        # Create the physics body
+        body = pymunk.Body(mass, moment_of_inertia, body_type=body_type)
+
+        # Set the body's position
+        body.position = pymunk.Vec2d(sprite.center_x, sprite.center_y)
+        body.angle = math.radians(sprite.angle)
+
+        # Callback used if we need custom gravity, damping, velocity, etc.
+        def velocity_callback(my_body, my_gravity, my_damping, dt):
+            """ Used for custom damping, gravity, and max_velocity. """
+
+            # Custom damping
+            if sprite.pymunk.damping is not None:
+                adj_damping = ((sprite.pymunk.damping * 100.0) / 100.0) ** dt
+                # print(f"Custom damping {sprite.pymunk.damping} {my_damping} default to {adj_damping}")
+                my_damping = adj_damping
+
+            # Custom gravity
+            if sprite.pymunk.gravity is not None:
+                my_gravity = sprite.pymunk.gravity
+
+            # Go ahead and update velocity
+            pymunk.Body.update_velocity(my_body, my_gravity, my_damping, dt)
+
+            # Now see if we are going too fast...
+
+            # Support max velocity
+            if sprite.pymunk.max_velocity:
+                velocity = my_body.velocity.length
+                if velocity > sprite.pymunk.max_velocity:
+                    scale = sprite.pymunk.max_velocity / velocity
+                    my_body.velocity = my_body.velocity * scale
+
+            # Support max horizontal velocity
+            if sprite.pymunk.max_horizontal_velocity:
+                velocity = my_body.velocity.x
+                if abs(velocity) > sprite.pymunk.max_horizontal_velocity:
+                    velocity = sprite.pymunk.max_horizontal_velocity * math.copysign(1, velocity)
+                    my_body.velocity = pymunk.Vec2d(velocity, my_body.velocity.y)
+
+            # Support max vertical velocity
+            if max_vertical_velocity:
+                velocity = my_body.velocity[1]
+                if abs(velocity) > max_vertical_velocity:
+                    velocity = max_horizontal_velocity * math.copysign(1, velocity)
+                    my_body.velocity = pymunk.Vec2d(my_body.velocity.x, velocity)
+
+        # Add callback if we need to do anything custom on this body
+        # if damping or gravity or max_velocity or max_horizontal_velocity or max_vertical_velocity:
+        if body_type == self.DYNAMIC:
+            body.velocity_func = velocity_callback
+
+        # Set the physics shape to the sprite's hitbox
+        poly = sprite.get_hit_box()
+        scaled_poly = [[x * sprite.scale for x in z] for z in poly]
+        shape = pymunk.Poly(body, scaled_poly, radius=radius)  # type: ignore
+
+        # Set collision type, used in collision callbacks
+        if collision_type:
+            shape.collision_type = collision_category
+
+        # How bouncy is the shape?
+        if elasticity is not None:
+            shape.elasticity = elasticity
+
+        # Set shapes friction
+        shape.friction = friction
+
+        # Create physics object and add to list
+        physics_object = PymunkPhysicsObject(body, shape)
+        self.sprites[sprite] = physics_object
+        if body_type != self.STATIC:
+            self.non_static_sprite_list.append(sprite)
+
+        # Add body and shape to pymunk engine
+        self.space.add(body, shape)
+
+        # Register physics engine with sprite, so we can remove from physics engine
+        # if we tell the sprite to go away.
+        sprite.register_physics_engine(self)
+
+
+    def get_collision_category(self, collision_type: str) -> int:
+        category = self.collision_types.get(collision_type)
+        if category is None:
+            category = self.next_collision_category
+            LOG.debug(f"Adding new collision type of {collision_type} with category 0x{category:08X}")
+            self.next_collision_category <<= 1
+            self.collision_types[collision_type] = category
+        return category
+
     
     def enable_collisions(self, object: arcade.PymunkPhysicsObject, collision_types: str | Iterable[str]):
         """Enable or disable collisions for `object` and other objects"""
@@ -46,19 +197,61 @@ class PhysicsEngine(arcade.PymunkPhysicsEngine):
             collision_types = [collision_types]
         mask = object.shape.filter.mask
         for collision_type in collision_types:
-            category = self._find_or_add_collision_type(collision_type)
+            category = self.get_collision_category(collision_type)
             category = 1 << category
             mask |= category
         object.shape.filter.mask = mask
+
 
     def disable_collisions(self, object: arcade.PymunkPhysicsObject, collision_types: str | Iterable[str]):
         """Disable or disable collisions for `object` and other objects"""
         if isinstance(collision_types, str):
             collision_types = [collision_types]
-        mask = object.shape.filter.mask
+        if object.shape.filter is None:
+            object.shape.filter = pymunk.ShapeFilter()
+        mask: int = object.shape.filter.mask
         for collision_type in collision_types:
-            category = self._find_or_add_collision_type(collision_type)
+            category = self.get_collision_category(collision_type)
             category = 1 << category
             mask &= ~category
         object.shape.filter.mask = mask
-            
+    
+    
+    def add_collision_handler(self,
+                              first_type: str,
+                              second_type: str,
+                              begin_handler: Callable = None,
+                              pre_handler: Callable = None,
+                              post_handler: Callable = None,
+                              separate_handler: Callable = None):
+        """ Add code to handle collisions between objects. """
+        first_type_id = self.get_collision_category(first_type)
+        second_type_id = self.get_collision_category(second_type)
+
+        def _f1(arbiter, space, data):
+            sprite_a, sprite_b = self.get_sprites_from_arbiter(arbiter)
+            should_process_collision = begin_handler(sprite_a, sprite_b, arbiter, space, data)
+            return should_process_collision
+
+        def _f2(arbiter, space, data):
+            sprite_a, sprite_b = self.get_sprites_from_arbiter(arbiter)
+            if sprite_a is not None and sprite_b is not None:
+                post_handler(sprite_a, sprite_b, arbiter, space, data)
+
+        def _f3(arbiter, space, data):
+            sprite_a, sprite_b = self.get_sprites_from_arbiter(arbiter)
+            return pre_handler(sprite_a, sprite_b, arbiter, space, data)
+
+        def _f4(arbiter, space, data):
+            sprite_a, sprite_b = self.get_sprites_from_arbiter(arbiter)
+            separate_handler(sprite_a, sprite_b, arbiter, space, data)
+
+        h = self.space.add_collision_handler(first_type_id, second_type_id)
+        if begin_handler:
+            h.begin = _f1
+        if post_handler:
+            h.post_solve = _f2
+        if pre_handler:
+            h.pre_solve = _f3
+        if separate_handler:
+            h.separate = _f4
