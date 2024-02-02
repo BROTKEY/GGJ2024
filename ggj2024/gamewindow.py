@@ -62,6 +62,8 @@ LEVELS = {
     },
 }
 
+STEP_DELTA_T = 1/(60*STEPS_PER_FRAME)
+
 
 class GameWindow(arcade.Window):
     """ Main Window """
@@ -461,6 +463,9 @@ class GameWindow(arcade.Window):
         self.physics_engine.add_collision_handler('background', 'item', pre_handler=lambda *args: False)
         self.physics_engine.add_collision_handler('background', 'finish', pre_handler=lambda *args: False)
 
+        # self.physics_engine.get_physics_object(self.player_sprite).shape.filter
+        # filter = pymunk.ShapeFilter()
+
     @property
     def main_gravity(self):
         return self._main_gravity
@@ -716,7 +721,7 @@ class GameWindow(arcade.Window):
     def on_mouse_motion(self, x, y, dx, dy):
         self.last_mouse_position = (x, y)
 
-    def do_physics_step(self, delta_time):
+    def do_physics_step(self, delta_time, resync_sprites: bool):
         """ Movement and game logic """
         if self.mark_player_dead:
             self.kill_player(self.mark_player_dead)
@@ -772,12 +777,13 @@ class GameWindow(arcade.Window):
         for entity in self.entities:
             entity.update()
 
-        self.physics_engine.step(delta_time=delta_time)
+        self.physics_engine.step(delta_time, resync_sprites)
 
     def on_update(self, delta_time):
-        # Move items in the physics engine
-        for i in range(STEPS_PER_FRAME):
-            self.do_physics_step(1/(60*STEPS_PER_FRAME))
+        # Advance simulation n-1 times without resyncing sprites, then one last time with resyncing
+        for i in range(STEPS_PER_FRAME-1):
+            self.do_physics_step(STEP_DELTA_T, resync_sprites=False)
+        self.do_physics_step(STEP_DELTA_T, resync_sprites=True)
 
         # Delete old blood
         new_particle_list = arcade.SpriteList()
