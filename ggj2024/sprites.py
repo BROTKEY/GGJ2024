@@ -3,11 +3,11 @@ import pymunk
 
 import numpy as np
 import time
-from PIL import Image, ImageDraw
 
 from ggj2024.config import *
 from ggj2024.utils import *
 from ggj2024.spriteset import Spriteset
+from ggj2024.physics_engine import PhysicsEngine
 
 
 
@@ -21,7 +21,6 @@ class SPRITESETS:
 class PlayerSprite(arcade.Sprite):
     """ Player Sprite """
     def __init__(self,
-                #  ladder_list: arcade.SpriteList,
                  hit_box_algorithm):
         """ Init """
         # Let parent initialize
@@ -134,6 +133,9 @@ class PlayerControlledPlatformSprite(arcade.Sprite):
 
 
 class ParticleSprite(arcade.Sprite):
+    COLLISION_TYPE = 'particle'
+    DISABLED_COLLISIONS = ['player', 'platform', 'particle']
+    
     def __init__(self, x, y, radius, mass=1, liftetime=BLOOD_LIFETIME):
         color_var = int(np.random.random() * BLOOD_COLOR_VARIATION)
         if np.random.rand() < 0.5:
@@ -149,3 +151,10 @@ class ParticleSprite(arcade.Sprite):
         self.radius = radius
         self.color = color
         self.killtime = time.time() + liftetime
+    
+    def register_physics_engine(self, physics_engine):
+        super().register_physics_engine(physics_engine)
+        print('Registering particle sprite')
+        if isinstance(physics_engine, PhysicsEngine):
+            print('Disabling particle sprite collisions')
+            physics_engine.disable_collisions(self, ParticleSprite.DISABLED_COLLISIONS)

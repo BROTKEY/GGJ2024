@@ -28,6 +28,8 @@ from ggj2024.utils import *
 from ggj2024.sprites import ParticleSprite, PlayerControlledPlatformSprite, PlayerSprite, SPRITESETS
 from ggj2024.itemspawner import ItemSpawner, Entity
 from ggj2024.region import Region
+from ggj2024.physics_engine import PhysicsEngine
+
 
 
 class MECHANICS(Enum):
@@ -78,7 +80,7 @@ class GameWindow(arcade.Window):
         self.debug = debug
 
         # Physics engine
-        self.physics_engine: Optional[arcade.PymunkPhysicsEngine] = None
+        self.physics_engine: Optional[PhysicsEngine] = None
 
         # Player sprite
         self.player_sprite: Optional[PlayerSprite] = None
@@ -292,9 +294,8 @@ class GameWindow(arcade.Window):
             print('WARNING: No finish was defined, this level is unbeatable!')
 
         # Create the physics engine
-        self.physics_engine = arcade.PymunkPhysicsEngine(damping=self.damping,
-                                                         gravity=tuple(
-                                                             self.main_gravity))
+        self.physics_engine = PhysicsEngine(damping=self.damping,
+                                            gravity=tuple(self.main_gravity))
 
         # Add the player.
         # For the player, we set the damping to a lower value, which increases
@@ -312,9 +313,9 @@ class GameWindow(arcade.Window):
                                        moment=arcade.PymunkPhysicsEngine.MOMENT_INF,
                                        collision_type="player",
                                        max_horizontal_velocity=PLAYER_MAX_HORIZONTAL_SPEED,
-                                       max_vertical_velocity=PLAYER_MAX_VERTICAL_SPEED)
+                                       max_vertical_velocity=PLAYER_MAX_VERTICAL_SPEED,
+                                       disable_collisions_for=['particle', 'background'])
 
-        # Create the walls.
         # By setting the body type to PymunkPhysicsEngine.STATIC the walls can't
         # move.
         # Movable objects that respond to forces are PymunkPhysicsEngine.DYNAMIC
@@ -325,33 +326,34 @@ class GameWindow(arcade.Window):
                                             friction=WALL_FRICTION,
                                             collision_type="wall",
                                             body_type=arcade.PymunkPhysicsEngine.STATIC)
-
-        # Create the items
-        self.physics_engine.add_sprite_list(self.item_list,
-                                            friction=DYNAMIC_ITEM_FRICTION,
-                                            collision_type="item")
-        
+        # Create backgrounds
         self.physics_engine.add_sprite_list(self.background_list,
                                             collision_type="background",
-                                            body_type=arcade.PymunkPhysicsEngine.STATIC)
-    
+                                            body_type=arcade.PymunkPhysicsEngine.STATIC,
+                                            disable_collisions_for=['player', 'item', 'wall', 'soft', 'finish'])
+        # Create soft static objects        
         self.physics_engine.add_sprite_list(self.soft_list,
                                             collision_type='soft',
                                             body_type=arcade.PymunkPhysicsEngine.STATIC,
                                             elasticity=1.0)
-        
+        # Create the items
+        self.physics_engine.add_sprite_list(self.item_list,
+                                            friction=DYNAMIC_ITEM_FRICTION,
+                                            collision_type="item",
+                                            disable_collisions_for=['background', 'finish'])
+        # Create finish object
         self.physics_engine.add_sprite_list(self.finish_list,
                                             collision_type='finish',
-                                            body_type=arcade.PymunkPhysicsEngine.STATIC)
+                                            body_type=arcade.PymunkPhysicsEngine.STATIC,
+                                            disable_collisions_for=['item', 'wall', 'soft', 'finish'])
 
         # add platforms moved by second player
         self.setup_platforms()
-        self.physics_engine.add_sprite_list(
-            self.controllable_platform_list,
-            friction=DYNAMIC_ITEM_FRICTION,
-            collision_type="platform",
-            body_type=arcade.PymunkPhysicsEngine.KINEMATIC
-        )
+        self.physics_engine.add_sprite_list(self.controllable_platform_list,
+                                            friction=DYNAMIC_ITEM_FRICTION,
+                                            collision_type="platform",
+                                            body_type=arcade.PymunkPhysicsEngine.KINEMATIC,
+                                            disable_collisions_for=['background', 'particle'])
 
         # Collisions
         def handle_player_wall_collision(player_sprite: PlayerSprite, wall_sprite: arcade.sprite, arbiter: pymunk.Arbiter, space, data):
@@ -381,6 +383,8 @@ class GameWindow(arcade.Window):
             return False
 
         def handle_platform_collision(player: PlayerSprite, platform: PlayerControlledPlatformSprite, arbiter: pymunk.Arbiter, space, data):
+            # If platform is active: return True => continue with collision
+            # Else: return False to ignore collision
             return platform.active
 
         self.physics_engine.add_collision_handler('player', 'wall', post_handler=handle_player_wall_collision)
@@ -448,23 +452,11 @@ class GameWindow(arcade.Window):
 
         self.physics_engine.add_collision_handler('particle', 'wall', post_handler=handle_particle_x_collision)
         self.physics_engine.add_collision_handler('particle', 'item', post_handler=handle_particle_x_collision)
-        self.physics_engine.add_collision_handler('particle', 'background', post_handler=handle_particle_x_collision, 
+        self.physics_engine.add_collision_handler('particle', 'background', 
+                                                  post_handler=handle_particle_x_collision, 
                                                   begin_handler=lambda *args: np.random.rand() > 0.5)
         self.physics_engine.add_collision_handler('particle', 'soft', post_handler=handle_particle_x_collision)
-        self.physics_engine.add_collision_handler('particle', 'player', pre_handler=lambda *args: False)
-        self.physics_engine.add_collision_handler('particle', 'platform', pre_handler=lambda *args: False)
-        
-        self.physics_engine.add_collision_handler('particle', 'finish', pre_handler=lambda *args: False)
-        self.physics_engine.add_collision_handler('item', 'finish', pre_handler=lambda *args: False)
-        self.physics_engine.add_collision_handler('wall', 'finish', pre_handler=lambda *args: False)
-        self.physics_engine.add_collision_handler('soft', 'finish', pre_handler=lambda *args: False)
 
-        self.physics_engine.add_collision_handler('background', 'player', pre_handler=lambda *args: False)
-        self.physics_engine.add_collision_handler('background', 'item', pre_handler=lambda *args: False)
-        self.physics_engine.add_collision_handler('background', 'finish', pre_handler=lambda *args: False)
-
-        # self.physics_engine.get_physics_object(self.player_sprite).shape.filter
-        # filter = pymunk.ShapeFilter()
 
     @property
     def main_gravity(self):
@@ -539,8 +531,14 @@ class GameWindow(arcade.Window):
             removed = self.spawned_item_list.pop(0)
             self.physics_engine.remove_sprite(removed)
         self.spawned_item_list.append(sprite)
-        self.physics_engine.add_sprite(sprite, mass, friction, elasticity, collision_type='item',
-                                       max_velocity=ITEM_MAX_VELOCITY)
+        self.physics_engine.add_sprite(sprite, 
+                                       mass, 
+                                       friction, 
+                                       elasticity, 
+                                       max_velocity=ITEM_MAX_VELOCITY,
+                                       collision_type='item',
+                                       disable_collisions_for=['backround', 'finish']
+                                       )
         
 
     def update_gravity(self):

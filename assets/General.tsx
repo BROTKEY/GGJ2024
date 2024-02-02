@@ -6,6 +6,11 @@
  </tile>
  <tile id="21">
   <image width="128" height="128" source="TILES/Flag.png"/>
+  <objectgroup draworder="index" id="2">
+   <object id="2" x="56.75" y="19.5">
+    <polygon points="0,0 -1.65909,108.068 55.5227,36.2273"/>
+   </object>
+  </objectgroup>
  </tile>
  <tile id="26">
   <image width="128" height="128" source="TILES/Platform.png"/>
@@ -91,7 +96,9 @@
  <tile id="66">
   <image width="128" height="128" source="TILES/Finish.png"/>
   <objectgroup draworder="index" id="2">
-   <object id="1" x="0" y="-1" width="128" height="130"/>
+   <object id="2" x="56.9091" y="20">
+    <polygon points="0,0 -1.65909,108.068 55.5227,36.2273"/>
+   </object>
   </objectgroup>
  </tile>
  <tile id="67">

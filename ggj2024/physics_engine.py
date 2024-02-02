@@ -22,6 +22,9 @@ class PhysicsEngine(arcade.PymunkPhysicsEngine):
         default = 0.708 or a little bit over 45° angle
     """
 
+    # pymunk is built upon Chipmunk which only supports upto 32 collision categories
+    MAX_COLLISION_CATEGORY = 1 << 32
+
     def __init__(self, gravity=(0, 0), damping: float = 1.0, maximum_incline_on_ground: float = 0.708):
         super().__init__(gravity, damping, maximum_incline_on_ground)
         self.collision_types: dict[str, int] = {}
@@ -42,9 +45,10 @@ class PhysicsEngine(arcade.PymunkPhysicsEngine):
                    max_vertical_velocity: int = None,
                    radius: float = 0,
                    collision_type: Optional[str] = "default",
+                   disable_collisions_for: Optional[list[str] | str] = None,
                    # the next two arguments are for backwards compatibility with prior versions
                    moment_of_intertia: Optional[float] = None,  # typo keyword, used by 2.6.2 and 2.6.3
-                   moment: Optional[float] = None  # used prior to 2.6.2
+                   moment: Optional[float] = None,  # used prior to 2.6.2
                    ):
         """ Add a sprite to the physics engine.
             Rewritten to use dicts instead of lists for collision type management
@@ -63,7 +67,8 @@ class PhysicsEngine(arcade.PymunkPhysicsEngine):
             :param max_horizontal_velocity: maximum velocity on the x axis
             :param max_vertical_velocity: maximum velocity on the y axis
             :param radius:
-            :param collision_type:
+            :param collision_type: name of the collision category to use for this object
+            :param disabler_collisions_for: diable collisions with objects of the given category / categories
             :param moment_of_intertia: Deprecated alias of moment_of_inertia compatible with a typo introduced in 2.6.2
             :param moment: Deprecated alias of moment_of_inertia compatible with versions <= 2.6.1
         """
@@ -159,6 +164,7 @@ class PhysicsEngine(arcade.PymunkPhysicsEngine):
         # Set collision type, used in collision callbacks
         if collision_type:
             shape.collision_type = collision_category
+        
 
         # How bouncy is the shape?
         if elasticity is not None:
@@ -173,12 +179,47 @@ class PhysicsEngine(arcade.PymunkPhysicsEngine):
         if body_type != self.STATIC:
             self.non_static_sprite_list.append(sprite)
 
+        # Set collision category
+        old_filter: pymunk.ShapeFilter = physics_object.shape.filter or pymunk.ShapeFilter()
+        physics_object.shape.filter = pymunk.ShapeFilter(old_filter.group,
+                                                         collision_category,
+                                                         old_filter.mask)
+        
+        # Disable given collisions
+        if disable_collisions_for:
+            self.disable_collisions(physics_object, disable_collisions_for)
+
         # Add body and shape to pymunk engine
         self.space.add(body, shape)
-
         # Register physics engine with sprite, so we can remove from physics engine
         # if we tell the sprite to go away.
         sprite.register_physics_engine(self)
+
+
+    def add_sprite_list(self,
+                        sprite_list,
+                        mass: float = 1,
+                        friction: float = 0.2,
+                        elasticity: Optional[float] = None,
+                        moment_of_intertia: Optional[float] = None,
+                        body_type: int = arcade.PymunkPhysicsEngine.DYNAMIC,
+                        damping: Optional[float] = None,
+                        collision_type: Optional[str] = None,
+                        disable_collisions_for: Optional[list[str] | str] = None
+                        ):
+        """ Add all sprites in a sprite list to the physics engine. """
+
+        for sprite in sprite_list:
+            self.add_sprite(sprite=sprite,
+                            mass=mass,
+                            friction=friction,
+                            elasticity=elasticity,
+                            moment_of_inertia=moment_of_intertia,
+                            body_type=body_type,
+                            damping=damping,
+                            collision_type=collision_type,
+                            disable_collisions_for=disable_collisions_for
+                            )
 
 
     def get_collision_category(self, collision_type: str) -> int:
@@ -186,36 +227,49 @@ class PhysicsEngine(arcade.PymunkPhysicsEngine):
         if category is None:
             category = self.next_collision_category
             LOG.debug(f"Adding new collision type of {collision_type} with category 0x{category:08X}")
+            if category > PhysicsEngine.MAX_COLLISION_CATEGORY:
+                raise ValueError("Maximum number of collision categories has been reached")
             self.next_collision_category <<= 1
             self.collision_types[collision_type] = category
         return category
-
     
-    def enable_collisions(self, object: arcade.PymunkPhysicsObject, collision_types: str | Iterable[str]):
+    
+    def get_collision_category_names(self, category: int) -> list[str]:
+        return [name for name, i in self.collision_types.items() if i & category]
+    
+
+    def enable_collisions(self, object: arcade.PymunkPhysicsObject | arcade.Sprite, collision_types: str | Iterable[str]):
         """Enable or disable collisions for `object` and other objects"""
+        if isinstance(object, arcade.Sprite):
+            object = self.get_physics_object(object)
         if isinstance(collision_types, str):
             collision_types = [collision_types]
-        mask = object.shape.filter.mask
+        old_filter = pymunk.ShapeFilter() if object.shape.filter is None else object.shape.filter
+        mask: int = old_filter.mask
         for collision_type in collision_types:
             category = self.get_collision_category(collision_type)
-            category = 1 << category
+            # category = 1 << category
             mask |= category
-        object.shape.filter.mask = mask
+        object.shape.filter = pymunk.ShapeFilter(old_filter.group,
+                                                 old_filter.categories,
+                                                 mask)
 
 
-    def disable_collisions(self, object: arcade.PymunkPhysicsObject, collision_types: str | Iterable[str]):
+    def disable_collisions(self, object: arcade.PymunkPhysicsObject | arcade.Sprite, collision_types: str | Iterable[str]):
         """Disable or disable collisions for `object` and other objects"""
+        if isinstance(object, arcade.Sprite):
+            object = self.get_physics_object(object)
         if isinstance(collision_types, str):
             collision_types = [collision_types]
-        if object.shape.filter is None:
-            object.shape.filter = pymunk.ShapeFilter()
-        mask: int = object.shape.filter.mask
+        old_filter = pymunk.ShapeFilter() if object.shape.filter is None else object.shape.filter
+        mask: int = old_filter.mask
         for collision_type in collision_types:
             category = self.get_collision_category(collision_type)
-            category = 1 << category
+            # category = 1 << category
             mask &= ~category
-        object.shape.filter.mask = mask
-    
+        object.shape.filter = pymunk.ShapeFilter(old_filter.group,
+                                                 old_filter.categories,
+                                                 mask)
     
     def add_collision_handler(self,
                               first_type: str,
