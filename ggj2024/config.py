@@ -106,3 +106,9 @@ HITSOUND_RANGE = 10000
 # Utils
 # Epsilon to avoid zero division
 ALPHA_COMPOSITE_EPSILON = 1e-9
+
+# Debug switches. Only relevant when launching with --debug
+DEBUG_SHOW_ITEM_HITBOXES = True
+DEBUG_SHOW_PLAYER_HITBOXES = True
+DEBUG_HITBOX_COLOR = (0, 0, 255, 255) # blue 
+DEBUG_BLOOD_SPLATTER = False

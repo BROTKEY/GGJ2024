@@ -407,10 +407,9 @@ class GameWindow(arcade.Window):
         # This is what draws the blood splatters onto the walls and items
         def handle_particle_collision(particle: ParticleSprite, other: arcade.Sprite, arbiter: pymunk.Arbiter, space: pymunk.Space, data):
             """Handle a collision between a blood particle and a static object (walls, backgrounds)"""
-            # TODO: move constants to config
             try:
                 if particle not in self.physics_engine.sprites:
-                    # Was already removed by other collision...?
+                    # Was already removed by other collision...? Happens quite often
                     # TODO: investigate this. Is this a bug and can this be avoided? (performance)
                     return False
                 
@@ -422,13 +421,16 @@ class GameWindow(arcade.Window):
                 additional_movement = abs(np.random.normal() * BLOOD_SPLATTER_IMPACT_RANGE) * impact_v
                 splatter_pos = impact_pos + additional_movement
                 
-                dbg_sprite_final = arcade.SpriteCircle(1, (0, 0, 255))
-                dbg_sprite_final.position = splatter_pos
-                self.debug_sprite_list.append(dbg_sprite_final)
+                if DEBUG_BLOOD_SPLATTER:
+                    # Draw a small dot at final splatter position
+                    dbg_sprite_final = arcade.SpriteCircle(1, (0, 0, 255))
+                    dbg_sprite_final.position = splatter_pos
+                    self.debug_sprite_list.append(dbg_sprite_final)
 
                 collision_filter = self.physics_engine.make_shapefilter(['wall', 'background', 'soft', 'item'], categories='particle')
                 collisions = space.point_query(splatter_pos, max_distance=int(particle.radius), shape_filter=collision_filter)
-                print('Collision with', len(collisions), 'shapes')
+                if DEBUG_BLOOD_SPLATTER:
+                    print('Collision with', len(collisions), 'shapes')
 
                 if collisions:
                     # These are the same for all collided tiles and are only needed *if* there is a collision
@@ -440,16 +442,15 @@ class GameWindow(arcade.Window):
                     # TODO: this operation is O(n), find better solution
                     collided_sprite = self.physics_engine.get_sprite_for_shape(collision_info.shape)
 
-                    pos_in_sprite = np.array(self.point_to_sprite(sprite=collided_sprite, point=splatter_pos))
-                    
                     tex_image = collided_sprite.texture.image
                     sprite_size = np.array([collided_sprite.width, collided_sprite.height])
                     image_size = np.array([tex_image.width, tex_image.height])
                     sprite_scale = image_size / sprite_size
+                    
+                    pos_in_sprite = np.array(self.point_to_sprite(sprite=collided_sprite, point=splatter_pos))
                     pos_in_image = sprite_scale * pos_in_sprite
                     pos_in_image[1] = tex_image.height - pos_in_image[1]
-                    
-                    # Draw centered at pos_in_image
+                    # Draw centered
                     pos_in_image -= splatter_radius
 
                     tex_array = np.array(tex_image).astype('float') / 255
@@ -877,7 +878,11 @@ class GameWindow(arcade.Window):
         for entity in self.entities:
             entity.draw()
         self.particle_list.draw()
+        
         if self.debug:
-            self.spawned_item_list.draw_hit_boxes(color=(0,0,255,255))
-        if self.debug:
+            if DEBUG_SHOW_ITEM_HITBOXES:
+                self.spawned_item_list.draw_hit_boxes(color=DEBUG_HITBOX_COLOR)
+            if DEBUG_SHOW_PLAYER_HITBOXES:
+                self.player_list.draw_hit_boxes(color=DEBUG_HITBOX_COLOR)
+            
             self.debug_sprite_list.draw()
