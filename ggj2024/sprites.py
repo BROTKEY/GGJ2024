@@ -154,7 +154,5 @@ class ParticleSprite(arcade.Sprite):
     
     def register_physics_engine(self, physics_engine):
         super().register_physics_engine(physics_engine)
-        print('Registering particle sprite')
         if isinstance(physics_engine, PhysicsEngine):
-            print('Disabling particle sprite collisions')
             physics_engine.disable_collisions(self, ParticleSprite.DISABLED_COLLISIONS)
