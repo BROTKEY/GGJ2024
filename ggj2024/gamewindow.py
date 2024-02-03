@@ -463,17 +463,18 @@ class GameWindow(arcade.Window):
                     # Use textures in the texture dict instead of creating a new one every time
                     texture: arcade.Texture = self.splatter_texture_dict.get(collided_sprite)
                     if texture is None:
+                        # No splatter texture created for this sprite yet, create one
                         tex_name = f'splatter_{self.splatter_counter}'
                         self.splatter_counter += 1
                         texture = arcade.Texture(tex_name, tex_image)
                         self.splatter_texture_dict[collided_sprite] = texture
+                        # HACK: just restore sprite size (gets reset on texture change)
+                        collided_sprite.texture = texture
+                        collided_sprite.width, collided_sprite.height = sprite_size
                     else:
+                        # Re-use the existing texture
                         texture.image = tex_image
                         self.ctx.default_atlas.update_texture_image(texture)
-                    
-                    # HACK: just restore sprite size (gets reset on texture change)
-                    collided_sprite.texture = texture
-                    collided_sprite.width, collided_sprite.height = sprite_size
 
                 # Collision handled, remove particle
                 self.physics_engine.remove_sprite(particle)
