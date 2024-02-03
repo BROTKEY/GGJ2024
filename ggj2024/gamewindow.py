@@ -475,6 +475,7 @@ class GameWindow(arcade.Window):
                         # Re-use the existing texture
                         texture.image = tex_image
                         self.ctx.default_atlas.update_texture_image(texture)
+                        # No need to re-apply the texture to the sprite since it is already the active one
 
                 # Collision handled, remove particle
                 self.physics_engine.remove_sprite(particle)
