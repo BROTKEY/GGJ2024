@@ -890,16 +890,17 @@ class GameWindow(arcade.Window):
 
     def do_physics_step(self, delta_time, resync_sprites: bool):
         """ Movement and game logic """
-        if self.mark_player_dead:
-            self.kill_player(self.mark_player_dead)
+        player_object = self.physics_engine.get_physics_object(self.player_sprite)
         
-        x_inbounds = (0 <= self.player_sprite.center_x <= self.map_bounds_x)
-        y_inbounds = (0 <= self.player_sprite.center_y <= self.map_bounds_y)
+        x_inbounds = (0 <= player_object.body.position.x <= self.map_bounds_x)
+        y_inbounds = (0 <= player_object.body.position.y <= self.map_bounds_y)
         if not (x_inbounds and y_inbounds):
             self.mark_player_dead = 'out_of_bounds'
 
+        if self.mark_player_dead:
+            self.kill_player(self.mark_player_dead)
+
         # Rotate player to gravity
-        player_object = self.physics_engine.get_physics_object(self.player_sprite)
         gravity_angle = np.arctan2(*self.main_gravity_dir)
         player_object.shape.body.angle = np.pi - gravity_angle
         player_velocity: pymunk.Vec2d = player_object.body.velocity.rotated(gravity_angle)
