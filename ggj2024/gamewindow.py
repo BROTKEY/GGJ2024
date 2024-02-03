@@ -755,8 +755,6 @@ class GameWindow(arcade.Window):
                 self.space_pressed = True
                 # find out if player is standing on ground
                 self.player_sprite.jump(self.physics_engine)
-            case arcade.key.MOD_SHIFT:
-                self.shift_pressed = True
 
             case arcade.key.ENTER:
                 self.enter_pressed = True
@@ -775,6 +773,11 @@ class GameWindow(arcade.Window):
                 self.up_pressed = True
             case arcade.key.DOWN:
                 self.down_pressed = True
+
+        if modifiers & arcade.key.MOD_SHIFT:
+            self.shift_pressed = True
+        else:
+            self.shift_pressed = False
 
     def on_key_release(self, key, modifiers):
         """Called when the user releases a key. """
@@ -799,8 +802,11 @@ class GameWindow(arcade.Window):
                 self.up_pressed = False
             case arcade.key.DOWN:
                 self.down_pressed = False
-            case arcade.key.MOD_SHIFT:
-                self.shift_pressed = False
+                
+        if modifiers & arcade.key.MOD_SHIFT:
+            self.shift_pressed = True
+        else:
+            self.shift_pressed = False
 
     def on_mouse_press(self, x, y, button, modifiers):
         """ Called whenever the mouse button is clicked. """
@@ -834,7 +840,6 @@ class GameWindow(arcade.Window):
         self.last_mouse_position = (x, y)
 
     def on_controller_button_pressed(self, controller, button):
-        print('Pressed', button)
         match button:
             case 'a':
                 self.player_sprite.jump(self.physics_engine)
@@ -849,7 +854,6 @@ class GameWindow(arcade.Window):
                 print('Unknown button', button, 'pressed')
     
     def on_controller_button_released(self, controller, button):
-        print('Released', button)
         match button:
             case 'a':
                 pass
@@ -878,7 +882,8 @@ class GameWindow(arcade.Window):
         pass
 
     def on_controller_dpad_motion(self, controller, left, right, up, down):
-        print('dpad', left, right, up, down)
+        # print('dpad', left, right, up, down)
+        pass
     
     def is_player_sprinting(self):
         if self.controller:
