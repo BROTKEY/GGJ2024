@@ -120,7 +120,8 @@ class GameWindow(arcade.Window):
 
         self.hands = HandReceiver()
 
-        self.splatter_texture_dict: dict[arcade.Sprite, Image.Image] = dict()
+        self.splatter_texture_dict: dict[arcade.Sprite, arcade.Texture] = {}
+        # self.splatter_texture_dict: dict[arcade.Sprite, Image.Image] = dict()
         self.splatter_counter = 0
 
         self.backgroundcolor_list = arcade.ShapeElementList()
@@ -223,6 +224,8 @@ class GameWindow(arcade.Window):
         colors = (color1, color1, color2, color2)
         rect = arcade.create_rectangle_filled_with_colors(points, colors)
         self.backgroundcolor_list.append(rect)
+
+        self.splatter_texture_dict: dict[arcade.Sprite, arcade.Texture] = {}
 
         self.width = int(min(self.width, self.map_bounds_x))
         self.height = int(min(self.height, self.map_bounds_y))
@@ -457,10 +460,16 @@ class GameWindow(arcade.Window):
                     new_img = alpha_composite(tex_array, splatter_array, tuple(pos_in_image.astype(int)), inplace=True, mask_fg_with_bg=True) * 255
                     tex_image = Image.fromarray(new_img.astype('uint8'))
 
-                    self.splatter_texture_dict[other] = tex_image
-                    tex_name = f'splatter_{self.splatter_counter}'
-                    self.splatter_counter += 1
-                    texture = arcade.Texture(tex_name, tex_image)
+                    # Use textures in the texture dict instead of creating a new one every time
+                    texture: arcade.Texture = self.splatter_texture_dict.get(collided_sprite)
+                    if texture is None:
+                        tex_name = f'splatter_{self.splatter_counter}'
+                        self.splatter_counter += 1
+                        texture = arcade.Texture(tex_name, tex_image)
+                        self.splatter_texture_dict[collided_sprite] = texture
+                    else:
+                        texture.image = tex_image
+                        self.ctx.default_atlas.update_texture_image(texture)
                     
                     # HACK: just restore sprite size (gets reset on texture change)
                     collided_sprite.texture = texture
