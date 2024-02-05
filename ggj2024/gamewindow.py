@@ -562,7 +562,7 @@ class GameWindow(arcade.Window):
                 if not self.platform_left_collision:
                     lx = self.hands.left_hand.x
                     ly = self.hands.left_hand.y
-                    pos = (self.camera.position.x + self.width/2 + lx, self.camera.position.y + ly)
+                    pos = (self.camera.position.x + self.width*lx, self.camera.position.y + self.height*ly)
                     self.physics_engine.set_position(self.platform_left, pos)
 
             if self.platform_right:
@@ -576,7 +576,7 @@ class GameWindow(arcade.Window):
                 if not self.platform_right_collision:
                     rx = self.hands.right_hand.x
                     ry = self.hands.right_hand.y
-                    pos = (self.camera.position.x + self.width/2 + rx, self.camera.position.y + ry)
+                    pos = (self.camera.position.x + self.width*rx, self.camera.position.y + self.height*ry)
                     self.physics_engine.set_position(self.platform_right, pos)
         else:
             # update platform position based on mouse input

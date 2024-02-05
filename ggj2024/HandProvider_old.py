@@ -3,24 +3,16 @@ import socket
 import threading
 import mediapipe as mp
 import cv2
-import numpy as np
-import math
-
-
-HAND_POINT_WRIST = 0
-HAND_POINT_MIDDLE_MCP = 9
-HAND_POINT_MIDDLE_TIP = 12
-
 
 class HandProvider:
     running = False
 
-    def __init__(self, datasource, addr="127.0.0.1", port=42069):
+    def __init__(self, source, addr="127.0.0.1", port=42069):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.bind((addr, port))
         self.sock.listen(4)
         self.connection_handler = threading.Thread(target=self.connection_handler)
-        self.datasource = datasource
+        self.data = source
 
         print("Opened Socket on: {}:{}".format(addr, port))
 
@@ -34,7 +26,7 @@ class HandProvider:
 
     def client_handler(self, client, addr):
         while True:
-            data = "{};{};{}|{};{};{}|{}|{}".format(*self.datasource.left_hand_position, *self.datasource.right_hand_position, self.datasource.left_hand_grab_angle, self.datasource.right_hand_grab_angle)
+            data = "{};{};{}|{};{};{}".format(*self.data.left_hand_position, *self.data.right_hand_position)
 
             try:
                 client.send(bytes(data, 'utf-8'))
@@ -64,9 +56,6 @@ class LeapListener(leap.Listener):
     left_hand_position = (0, 0, 0)
     right_hand_position = (0, 0, 0)
 
-    left_hand_grab_angle = 0
-    right_hand_grab_angle = 0
-
     def on_connection_event(self, event):
         print("Connected")
 
@@ -83,16 +72,13 @@ class LeapListener(leap.Listener):
         for hand in event.hands:
             if str(hand.type) == "HandType.Left":
                 self.left_hand_position = (hand.palm.position.x, hand.palm.position.y, hand.palm.position.z)
-                self.left_hand_grab_angle = hand.grab_angle
             else:
                 self.right_hand_position = (hand.palm.position.x, hand.palm.position.y, hand.palm.position.z)
-                self.right_hand_grab_angle = hand.grab_angle
+
 
 class MediapipeListener:
     left_hand_position = (0, 0, 0)
     right_hand_position = (0, 0, 0)
-    left_hand_grab_angle = 0
-    right_hand_grab_angle = 0
     running = True
 
     def __init__(self, capture_device=0, x_scale=1, y_scale=1, max_hands=2, model_complexity=0, min_detection_confidence=0.5, min_tracking_confidence=0.5):
@@ -128,21 +114,10 @@ class MediapipeListener:
                     else:
                         handedness.append("r")
                 for i, hand_landmarks in enumerate(results.multi_hand_landmarks):
-                    wrist_landmark = hand_landmarks.landmark[HAND_POINT_WRIST]
-                    mtip_landmark = hand_landmarks.landmark[HAND_POINT_MIDDLE_TIP]
-                    mmcp_landmark = hand_landmarks.landmark[HAND_POINT_MIDDLE_MCP]
-                    
-                    wrist_position = np.array([wrist_landmark.x, wrist_landmark.y, wrist_landmark.z])
-                    mtip_distance = abs(sum(np.array([mtip_landmark.x, mtip_landmark.y, mtip_landmark.z]) - wrist_position))
-                    mmcp_distance = abs(sum(np.array([mmcp_landmark.x, mmcp_landmark.y, mmcp_landmark.z]) - wrist_position))
-
                     if handedness[i] == "l":
-                        self.left_hand_position = (wrist_landmark.x, 1-wrist_landmark.y, wrist_landmark.z)
-                        self.left_hand_grab_angle = int(mtip_distance < mmcp_distance) * math.pi
+                        self.left_hand_position = (hand_landmarks.landmark[0].x, hand_landmarks.landmark[0].y, hand_landmarks.landmark[0].z)
                     else:
-                        self.right_hand_position = (wrist_landmark.x, 1-wrist_landmark.y, wrist_landmark.z)
-                        self.right_hand_grab_angle = int(mtip_distance < mmcp_distance) * math.pi
-                    print(f"Left Hand: {self.left_hand_grab_angle}\t\t{self.right_hand_grab_angle}")
+                        self.right_hand_position = (hand_landmarks.landmark[0].x, hand_landmarks.landmark[0].y, hand_landmarks.landmark[0].z)
                     mp.solutions.drawing_utils.draw_landmarks(
                                 image,
                                 hand_landmarks,
@@ -159,8 +134,9 @@ class MediapipeListener:
         self.capture.release()
 
 
-def main(provider):
-    if provider == "Leap":
+if __name__ == "__main__":
+    LISTENER = "Leap"
+    if LISTENER == "Leap":
         listener = LeapListener()
 
         connection = leap.Connection()
@@ -175,7 +151,7 @@ def main(provider):
             input("Press Enter to Exit")
 
             provider.stop()
-    elif provider == "Mediapipe":
+    elif LISTENER == "Mediapipe":
         listener = MediapipeListener()
 
         provider = HandProvider(listener)
@@ -185,7 +161,3 @@ def main(provider):
 
         provider.stop()
     exit(0)
-
-
-if __name__ == "__main__":
-    main("Mediapipe")
