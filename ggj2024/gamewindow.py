@@ -120,7 +120,8 @@ class GameWindow(arcade.Window):
         self.right_pressed: bool = False
         self.up_pressed: bool = False
         self.down_pressed: bool = False
-        self.hands = HandReceiver()
+        if self.leap_motion:
+            self.hands = HandReceiver()
 
         self.splatter_texture_dict: dict[arcade.Sprite, arcade.Texture] = {}
         # self.splatter_texture_dict: dict[arcade.Sprite, Image.Image] = dict()
@@ -164,6 +165,21 @@ class GameWindow(arcade.Window):
             print(f'Choosing first controller')
             self.controller = controller
             self.controller.open()
+            @self.controller.event
+            def on_button_press(*args):
+                return self.on_controller_button_pressed(*args)
+            @self.controller.event
+            def on_button_release(*args):
+                return self.on_controller_button_released(*args)
+            @self.controller.event
+            def on_trigger_motion(*args):
+                return self.on_controller_trigger_motion(*args)
+            @self.controller.event
+            def on_stick_motion(*args):
+                return self.on_controller_stick_motion(*args)
+            @self.controller.event
+            def on_dpad_motion(*args):
+                return self.on_controller_dpad_motion(*args)
 
         self.spawnable_assets = [str(fn) for fn in Path('assets/AFOPNGS/').glob('*.png')]
 
@@ -195,21 +211,7 @@ class GameWindow(arcade.Window):
 
         self.load_level(self.current_level)
 
-        @self.controller.event
-        def on_button_press(*args):
-            return self.on_controller_button_pressed(*args)
-        @self.controller.event
-        def on_button_release(*args):
-            return self.on_controller_button_released(*args)
-        @self.controller.event
-        def on_trigger_motion(*args):
-            return self.on_controller_trigger_motion(*args)
-        @self.controller.event
-        def on_stick_motion(*args):
-            return self.on_controller_stick_motion(*args)
-        @self.controller.event
-        def on_dpad_motion(*args):
-            return self.on_controller_dpad_motion(*args)
+
             
 
     def setup_platforms(self):
