@@ -120,8 +120,11 @@ class GameWindow(arcade.Window):
         self.right_pressed: bool = False
         self.up_pressed: bool = False
         self.down_pressed: bool = False
-        self.hands = HandReceiver()
-
+        if self.leap_motion:
+            self.hands = HandReceiver()
+        else:
+            self.hands = None
+            
         self.splatter_texture_dict: dict[arcade.Sprite, arcade.Texture] = {}
         # self.splatter_texture_dict: dict[arcade.Sprite, Image.Image] = dict()
         self.splatter_counter = 0
@@ -164,6 +167,21 @@ class GameWindow(arcade.Window):
             print(f'Choosing first controller')
             self.controller = controller
             self.controller.open()
+            @self.controller.event
+            def on_button_press(*args):
+                return self.on_controller_button_pressed(*args)
+            @self.controller.event
+            def on_button_release(*args):
+                return self.on_controller_button_released(*args)
+            @self.controller.event
+            def on_trigger_motion(*args):
+                return self.on_controller_trigger_motion(*args)
+            @self.controller.event
+            def on_stick_motion(*args):
+                return self.on_controller_stick_motion(*args)
+            @self.controller.event
+            def on_dpad_motion(*args):
+                return self.on_controller_dpad_motion(*args)
 
         self.spawnable_assets = [str(fn) for fn in Path('assets/AFOPNGS/').glob('*.png')]
 
@@ -195,21 +213,7 @@ class GameWindow(arcade.Window):
 
         self.load_level(self.current_level)
 
-        @self.controller.event
-        def on_button_press(*args):
-            return self.on_controller_button_pressed(*args)
-        @self.controller.event
-        def on_button_release(*args):
-            return self.on_controller_button_released(*args)
-        @self.controller.event
-        def on_trigger_motion(*args):
-            return self.on_controller_trigger_motion(*args)
-        @self.controller.event
-        def on_stick_motion(*args):
-            return self.on_controller_stick_motion(*args)
-        @self.controller.event
-        def on_dpad_motion(*args):
-            return self.on_controller_dpad_motion(*args)
+
             
 
     def setup_platforms(self):
@@ -643,15 +647,15 @@ class GameWindow(arcade.Window):
             pass
             # This one will set gravity to 0 if two opposite keys are pressed, is this good...?
             # TODO: maybe also make mouse controlled gravity an optional feature and include this one again?
-            # new_grav = np.array([0, 0], dtype='float')
-            # if self.left_pressed and not self.right_pressed:
-            #     new_grav[0] = -GRAVITY
-            # elif self.right_pressed and not self.left_pressed:
-            #     new_grav[0] = GRAVITY
-            # if self.up_pressed and not self.down_pressed:
-            #     new_grav[1] = GRAVITY
-            # elif self.down_pressed and not self.up_pressed:
-            #     new_grav[1] = -GRAVITY
+            new_grav = np.array([0, 0], dtype='float')
+            if self.left_pressed and not self.right_pressed:
+                new_grav[0] = -GRAVITY
+            elif self.right_pressed and not self.left_pressed:
+                new_grav[0] = GRAVITY
+            if self.up_pressed and not self.down_pressed:
+                new_grav[1] = GRAVITY
+            elif self.down_pressed and not self.up_pressed:
+                new_grav[1] = -GRAVITY
         else:
             if self.leap_motion:
                 left_hand = (self.hands.left_hand.x, self.hands.left_hand.y)

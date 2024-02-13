@@ -27,7 +27,7 @@ def main():
     # HACK: close hands server in better way
     try:
         arcade.run()
-        window.hands.stop()
     except KeyboardInterrupt:
         print('KeyboardInterrupt')
+    if window.hands:
         window.hands.stop()
