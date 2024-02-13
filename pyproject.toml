@@ -11,7 +11,7 @@ packages = [
 
 [tool.poetry.scripts]
 launch_game = "ggj2024.run:main"
-launch_leapmotion = "ggj2024.LeapProvider:main"
+launch_handprovider = "ggj2024.HandProvider:main"
 
 [tool.poetry.dependencies]
 python = ">=3.10"
