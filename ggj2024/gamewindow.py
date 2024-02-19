@@ -121,7 +121,7 @@ class GameWindow(arcade.Window):
                 self.hands = HandReceiver()
             except ConnectionRefusedError:
                 print('HandReceiver failed to establish connection: Connection Refused.')
-                print('If you are not planning to use LeapMotion try --no-leapmotion')
+                print('If you are not planning to use LeapMotion try --no-leapmotion.')
         else:
             self.hands = HandReceiverBase()
             
