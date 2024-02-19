@@ -17,6 +17,7 @@ from PIL import Image
 try: 
     import leap
     LEAP_AVAILABLE = True
+    del leap
 except ImportError:
     LEAP_AVAILABLE = False
 from ggj2024.HandReceiver import HandReceiverBase, HandReceiver
