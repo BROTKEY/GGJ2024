@@ -75,7 +75,7 @@ DISTANCE_TO_CHANGE_TEXTURE = 20
 FORCES_RELATIVE_TO_PLAYER = True
 
 # Defines how many (additionally spawned) diversifier items can exist at one time
-MAX_SPAWNED_ITEMS = 50
+MAX_SPAWNED_ITEMS = 10
 
 FIST_THRESHOLD = 2.5
 

@@ -19,11 +19,7 @@ try:
     LEAP_AVAILABLE = True
 except ImportError:
     LEAP_AVAILABLE = False
-
-if LEAP_AVAILABLE:
-    from ggj2024.HandReceiver import HandReceiver
-else:
-    from ggj2024.HandReceiver import HandReceiverBase as HandReceiver
+from ggj2024.HandReceiver import HandReceiverBase, HandReceiver
 
 from ggj2024.config import *
 from ggj2024.utils import *
@@ -121,9 +117,13 @@ class GameWindow(arcade.Window):
         self.up_pressed: bool = False
         self.down_pressed: bool = False
         if self.leap_motion:
-            self.hands = HandReceiver()
+            try:
+                self.hands = HandReceiver()
+            except ConnectionRefusedError:
+                print('HandReceiver failed to establish connection: Connection Refused.')
+                print('If you are not planning to use LeapMotion try --no-leapmotion')
         else:
-            self.hands = None
+            self.hands = HandReceiverBase()
             
         self.splatter_texture_dict: dict[arcade.Sprite, arcade.Texture] = {}
         # self.splatter_texture_dict: dict[arcade.Sprite, Image.Image] = dict()
