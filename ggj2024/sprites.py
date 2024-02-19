@@ -58,10 +58,10 @@ class PlayerSprite(arcade.Sprite):
         T = 20
         B = -60
         self.hit_box = [
-            (L,   B+4),
+            (L,   B+1),
             (L+4, B),
             (R-4, B),
-            (R,   B+4),
+            (R,   B+1),
             (R,   T), 
             (L,   T), 
         ]

@@ -6,6 +6,7 @@ import traceback
 from typing import Optional
 from enum import Enum
 from dataclasses import dataclass
+import sys
 
 import arcade
 import pymunk
@@ -14,12 +15,6 @@ import pyglet.input
 import numpy as np
 from PIL import Image
 
-try: 
-    import leap
-    LEAP_AVAILABLE = True
-    del leap
-except ImportError:
-    LEAP_AVAILABLE = False
 from ggj2024.HandReceiver import HandReceiverBase, HandReceiver
 
 from ggj2024.config import *
@@ -123,6 +118,7 @@ class GameWindow(arcade.Window):
             except ConnectionRefusedError:
                 print('HandReceiver failed to establish connection: Connection Refused.')
                 print('If you are not planning to use LeapMotion try --no-leapmotion.')
+                exit(1)
         else:
             self.hands = HandReceiverBase()
             
@@ -645,18 +641,21 @@ class GameWindow(arcade.Window):
         new_grav = None
 
         if self.debug:
-            pass
             # This one will set gravity to 0 if two opposite keys are pressed, is this good...?
             # TODO: maybe also make mouse controlled gravity an optional feature and include this one again?
-            new_grav = np.array([0, 0], dtype='float')
+            x = 0
+            y = 0
             if self.left_pressed and not self.right_pressed:
-                new_grav[0] = -GRAVITY
+                x = -GRAVITY
             elif self.right_pressed and not self.left_pressed:
-                new_grav[0] = GRAVITY
+                x = GRAVITY
             if self.up_pressed and not self.down_pressed:
-                new_grav[1] = GRAVITY
+                y = GRAVITY
             elif self.down_pressed and not self.up_pressed:
-                new_grav[1] = -GRAVITY
+                y = -GRAVITY
+            if x or y:
+                new_grav = np.array([x, y], dtype='float')
+            
         else:
             if self.leap_motion:
                 left_hand = (self.hands.left_hand.x, self.hands.left_hand.y)
@@ -681,6 +680,7 @@ class GameWindow(arcade.Window):
             else:
                 new_grav = np.array([SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2]) - np.array(self.last_mouse_position)
                 new_grav = normalize_vector(new_grav) * GRAVITY
+
         if new_grav is not None:
             self.main_gravity = new_grav
 
